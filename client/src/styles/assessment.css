@@ -1,0 +1,1201 @@
+/* ==========================================================
+   ASSESSMENT MANAGEMENT
+   AeroLearn Professional Theme
+========================================================== */
+
+:root{
+
+--primary:#2563eb;
+--primary-dark:#1d4ed8;
+
+--success:#16a34a;
+--danger:#dc2626;
+--warning:#f59e0b;
+--info:#0ea5e9;
+
+--text:#0f172a;
+--text-light:#64748b;
+
+--background:#f8fafc;
+--border:#e2e8f0;
+
+--shadow:
+0 10px 25px rgba(15,23,42,.06);
+
+--shadow-lg:
+0 20px 40px rgba(15,23,42,.10);
+
+}
+
+.assessment-container{
+
+max-width:1450px;
+
+margin:0 auto;
+
+animation:fadeIn .35s ease;
+
+}
+
+/* ==========================================================
+   HEADER
+========================================================== */
+
+.assessment-title{
+
+background:
+linear-gradient(
+135deg,
+#1e40af,
+#2563eb,
+#3b82f6
+);
+
+color:white;
+
+padding:40px;
+
+border-radius:24px;
+
+margin-bottom:35px;
+
+box-shadow:
+0 15px 35px rgba(37,99,235,.25);
+
+}
+
+.assessment-title h1{
+
+margin:0;
+
+font-size:40px;
+
+font-weight:700;
+
+letter-spacing:-.5px;
+
+}
+
+.assessment-title p{
+
+margin-top:15px;
+
+font-size:16px;
+
+line-height:1.8;
+
+opacity:.95;
+
+max-width:720px;
+
+}
+
+/* ==========================================================
+   CARDS
+========================================================== */
+
+.assessment-card,
+.records-card{
+
+background:#fff;
+
+border-radius:20px;
+
+padding:32px;
+
+border:1px solid var(--border);
+
+box-shadow:var(--shadow);
+
+margin-bottom:35px;
+
+transition:.25s;
+
+}
+
+.assessment-card:hover,
+.records-card:hover{
+
+transform:translateY(-4px);
+
+box-shadow:var(--shadow-lg);
+
+}
+
+.student-section h2,
+.assessment-components h2,
+.assessment-summary h2{
+
+display:flex;
+
+align-items:center;
+
+gap:10px;
+
+font-size:24px;
+
+margin-bottom:25px;
+
+color:var(--text);
+
+}
+
+/* ==========================================================
+   FORM GRID
+========================================================== */
+
+.form-grid{
+
+display:grid;
+
+grid-template-columns:
+repeat(auto-fit,minmax(260px,1fr));
+
+gap:22px;
+
+margin-bottom:35px;
+
+}
+
+.form-group{
+
+display:flex;
+
+flex-direction:column;
+
+}
+
+.form-group label{
+
+margin-bottom:8px;
+
+font-weight:600;
+
+font-size:14px;
+
+color:var(--text);
+
+}
+
+.form-group input,
+.form-group select{
+
+height:48px;
+
+padding:0 15px;
+
+border:1px solid var(--border);
+
+border-radius:12px;
+
+background:white;
+
+font-size:15px;
+
+transition:.25s;
+
+}
+
+.form-group input:focus,
+.form-group select:focus{
+
+outline:none;
+
+border-color:var(--primary);
+
+box-shadow:
+0 0 0 4px
+rgba(37,99,235,.12);
+
+}
+
+/* ==========================================================
+   SECTION HEADER
+========================================================== */
+
+.section-header{
+
+display:flex;
+
+justify-content:space-between;
+
+align-items:center;
+
+margin-bottom:22px;
+
+}
+
+.section-header h2{
+
+margin:0;
+
+}
+/* ==========================================================
+   COMPONENT ROWS
+========================================================== */
+
+.component-row{
+
+display:grid;
+
+grid-template-columns:
+2fr 2fr 140px 140px 60px;
+
+gap:15px;
+
+align-items:center;
+
+margin-bottom:16px;
+
+padding:14px;
+
+background:#f8fafc;
+
+border:1px solid var(--border);
+
+border-radius:14px;
+
+transition:.25s;
+
+}
+
+.component-row:hover{
+
+background:#eff6ff;
+
+border-color:#bfdbfe;
+
+}
+
+.component-row input,
+.component-row select{
+
+height:46px;
+
+padding:0 14px;
+
+border:1px solid var(--border);
+
+border-radius:10px;
+
+font-size:15px;
+
+background:#fff;
+
+transition:.25s;
+
+}
+
+.component-row input:focus,
+.component-row select:focus{
+
+outline:none;
+
+border-color:var(--primary);
+
+box-shadow:
+0 0 0 3px rgba(37,99,235,.12);
+
+}
+
+/* ==========================================================
+   BUTTONS
+========================================================== */
+
+.add-btn{
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+gap:8px;
+
+background:
+linear-gradient(
+135deg,
+var(--primary),
+#3b82f6
+);
+
+color:white;
+
+border:none;
+
+padding:12px 22px;
+
+border-radius:12px;
+
+font-size:15px;
+
+font-weight:700;
+
+cursor:pointer;
+
+transition:.25s;
+
+box-shadow:
+0 10px 20px rgba(37,99,235,.20);
+
+}
+
+.add-btn:hover{
+
+transform:translateY(-2px);
+
+box-shadow:
+0 15px 25px rgba(37,99,235,.28);
+
+}
+
+.delete-row{
+
+width:46px;
+
+height:46px;
+
+display:flex;
+
+justify-content:center;
+
+align-items:center;
+
+background:var(--danger);
+
+border:none;
+
+border-radius:12px;
+
+color:white;
+
+font-size:18px;
+
+cursor:pointer;
+
+transition:.25s;
+
+}
+
+.delete-row:hover{
+
+background:#b91c1c;
+
+transform:scale(1.05);
+
+}
+
+/* ==========================================================
+   FORM ACTIONS
+========================================================== */
+
+.form-actions{
+
+display:flex;
+
+justify-content:flex-end;
+
+gap:16px;
+
+margin-top:35px;
+
+flex-wrap:wrap;
+
+}
+
+.save-btn{
+
+background:var(--success);
+
+color:white;
+
+border:none;
+
+padding:13px 28px;
+
+border-radius:12px;
+
+font-size:15px;
+
+font-weight:700;
+
+cursor:pointer;
+
+transition:.25s;
+
+box-shadow:
+0 10px 20px rgba(22,163,74,.18);
+
+}
+
+.save-btn:hover{
+
+background:#15803d;
+
+transform:translateY(-2px);
+
+}
+
+.reset-btn{
+
+background:#64748b;
+
+color:white;
+
+border:none;
+
+padding:13px 28px;
+
+border-radius:12px;
+
+font-size:15px;
+
+font-weight:700;
+
+cursor:pointer;
+
+transition:.25s;
+
+}
+
+.reset-btn:hover{
+
+background:#475569;
+
+transform:translateY(-2px);
+
+}
+/* ==========================================================
+   ASSESSMENT SUMMARY
+========================================================== */
+
+.assessment-summary{
+
+margin-top:40px;
+
+padding-top:30px;
+
+border-top:1px solid var(--border);
+
+}
+
+.summary-grid{
+
+display:grid;
+
+grid-template-columns:
+repeat(auto-fit,minmax(220px,1fr));
+
+gap:20px;
+
+margin-top:25px;
+
+}
+
+.summary-item{
+
+display:flex;
+
+flex-direction:column;
+
+}
+
+.summary-item label{
+
+margin-bottom:8px;
+
+font-size:14px;
+
+font-weight:600;
+
+color:var(--text);
+
+}
+
+.summary-item input{
+
+height:50px;
+
+padding:0 16px;
+
+border:1px solid var(--border);
+
+border-radius:12px;
+
+background:#f8fafc;
+
+font-size:16px;
+
+font-weight:700;
+
+color:var(--primary);
+
+transition:.25s;
+
+}
+
+.summary-item input:focus{
+
+outline:none;
+
+border-color:var(--primary);
+
+box-shadow:
+0 0 0 4px rgba(37,99,235,.12);
+
+}
+
+/* ==========================================================
+   RECORDS SECTION
+========================================================== */
+
+.records-header{
+
+display:flex;
+
+justify-content:space-between;
+
+align-items:center;
+
+gap:20px;
+
+margin-bottom:28px;
+
+flex-wrap:wrap;
+
+}
+
+.records-header h2{
+
+margin:0;
+
+font-size:26px;
+
+font-weight:700;
+
+color:var(--text);
+
+}
+
+/* ==========================================================
+   SEARCH BOX
+========================================================== */
+
+.search-box{
+
+width:340px;
+
+max-width:100%;
+
+height:48px;
+
+padding:0 16px;
+
+border:1px solid var(--border);
+
+border-radius:12px;
+
+background:white;
+
+font-size:15px;
+
+transition:.25s;
+
+}
+
+.search-box:focus{
+
+outline:none;
+
+border-color:var(--primary);
+
+box-shadow:
+0 0 0 4px rgba(37,99,235,.12);
+
+}
+
+/* ==========================================================
+   OPTIONAL FILTER BAR
+========================================================== */
+
+.records-filter{
+
+display:flex;
+
+gap:15px;
+
+flex-wrap:wrap;
+
+margin-bottom:25px;
+
+}
+
+.records-filter select,
+.records-filter input{
+
+height:46px;
+
+padding:0 14px;
+
+border:1px solid var(--border);
+
+border-radius:10px;
+
+background:white;
+
+font-size:14px;
+
+transition:.25s;
+
+}
+
+.records-filter select:focus,
+.records-filter input:focus{
+
+outline:none;
+
+border-color:var(--primary);
+
+box-shadow:
+0 0 0 3px rgba(37,99,235,.12);
+
+}
+/* ==========================================================
+   ASSESSMENT TABLE
+========================================================== */
+
+.assessment-table{
+
+width:100%;
+
+border-collapse:collapse;
+
+background:#fff;
+
+border-radius:18px;
+
+overflow:hidden;
+
+box-shadow:var(--shadow);
+
+}
+
+.assessment-table thead{
+
+background:
+linear-gradient(
+90deg,
+var(--primary),
+#3b82f6
+);
+
+}
+
+.assessment-table th{
+
+padding:16px;
+
+text-align:left;
+
+color:#fff;
+
+font-size:14px;
+
+font-weight:700;
+
+letter-spacing:.4px;
+
+white-space:nowrap;
+
+}
+
+.assessment-table td{
+
+padding:16px;
+
+border-bottom:1px solid #edf2f7;
+
+font-size:14px;
+
+color:var(--text);
+
+vertical-align:middle;
+
+}
+
+.assessment-table tbody tr{
+
+transition:.2s;
+
+}
+
+.assessment-table tbody tr:hover{
+
+background:#f8fbff;
+
+}
+
+.assessment-table tbody tr:last-child td{
+
+border-bottom:none;
+
+}
+
+/* ==========================================================
+   SCORE BADGES
+========================================================== */
+
+.score-badge{
+
+display:inline-flex;
+
+align-items:center;
+
+justify-content:center;
+
+min-width:70px;
+
+padding:7px 12px;
+
+border-radius:999px;
+
+font-size:13px;
+
+font-weight:700;
+
+color:#fff;
+
+}
+
+.score-excellent{
+
+background:var(--success);
+
+}
+
+.score-good{
+
+background:var(--primary);
+
+}
+
+.score-average{
+
+background:var(--warning);
+
+}
+
+.score-poor{
+
+background:var(--danger);
+
+}
+
+/* ==========================================================
+   TABLE ACTIONS
+========================================================== */
+
+.table-actions{
+
+display:flex;
+
+align-items:center;
+
+gap:10px;
+
+flex-wrap:wrap;
+
+}
+
+.edit-btn{
+
+background:linear-gradient(
+135deg,
+var(--primary),
+#3b82f6
+);
+
+color:#fff;
+
+border:none;
+
+padding:10px 18px;
+
+border-radius:10px;
+
+font-size:14px;
+
+font-weight:600;
+
+cursor:pointer;
+
+transition:.25s;
+
+}
+
+.edit-btn:hover{
+
+transform:translateY(-2px);
+
+box-shadow:
+0 10px 20px rgba(37,99,235,.22);
+
+}
+
+.delete-btn{
+
+background:linear-gradient(
+135deg,
+var(--danger),
+#ef4444
+);
+
+color:#fff;
+
+border:none;
+
+padding:10px 18px;
+
+border-radius:10px;
+
+font-size:14px;
+
+font-weight:600;
+
+cursor:pointer;
+
+transition:.25s;
+
+}
+
+.delete-btn:hover{
+
+transform:translateY(-2px);
+
+box-shadow:
+0 10px 20px rgba(220,38,38,.22);
+
+}
+
+/* ==========================================================
+   EMPTY TABLE
+========================================================== */
+
+.no-records{
+
+padding:45px;
+
+text-align:center;
+
+font-size:16px;
+
+color:var(--text-light);
+
+}
+/* ==========================================================
+   RESPONSIVE DESIGN
+========================================================== */
+
+@media (max-width:1200px){
+
+.component-row{
+
+grid-template-columns:
+1fr 1fr 120px 120px 60px;
+
+}
+
+}
+
+@media (max-width:992px){
+
+.assessment-title{
+
+padding:30px;
+
+}
+
+.assessment-title h1{
+
+font-size:34px;
+
+}
+
+.records-header{
+
+flex-direction:column;
+
+align-items:flex-start;
+
+}
+
+.search-box{
+
+width:100%;
+
+}
+
+.form-actions{
+
+justify-content:stretch;
+
+}
+
+.form-actions button{
+
+flex:1;
+
+}
+
+.summary-grid{
+
+grid-template-columns:
+repeat(auto-fit,minmax(180px,1fr));
+
+}
+
+}
+
+@media (max-width:768px){
+
+.assessment-container{
+
+padding:0;
+
+}
+
+.assessment-title{
+
+padding:25px;
+
+border-radius:18px;
+
+}
+
+.assessment-title h1{
+
+font-size:28px;
+
+}
+
+.assessment-title p{
+
+font-size:15px;
+
+}
+
+.assessment-card,
+.records-card{
+
+padding:22px;
+
+border-radius:18px;
+
+}
+
+.form-grid{
+
+grid-template-columns:1fr;
+
+}
+
+.component-row{
+
+grid-template-columns:1fr;
+
+}
+
+.component-row input,
+.component-row select,
+.delete-row{
+
+width:100%;
+
+}
+
+.delete-row{
+
+height:48px;
+
+}
+
+.summary-grid{
+
+grid-template-columns:1fr;
+
+}
+
+.form-actions{
+
+flex-direction:column;
+
+}
+
+.save-btn,
+.reset-btn{
+
+width:100%;
+
+}
+
+.assessment-table{
+
+display:block;
+
+overflow-x:auto;
+
+white-space:nowrap;
+
+border-radius:14px;
+
+}
+
+.table-actions{
+
+justify-content:center;
+
+}
+
+}
+
+@media (max-width:480px){
+
+.assessment-title{
+
+padding:20px;
+
+}
+
+.assessment-title h1{
+
+font-size:24px;
+
+}
+
+.student-section h2,
+.assessment-components h2,
+.assessment-summary h2{
+
+font-size:20px;
+
+}
+
+.records-header h2{
+
+font-size:22px;
+
+}
+
+}
+
+/* ==========================================================
+   CUSTOM SCROLLBAR
+========================================================== */
+
+.assessment-table::-webkit-scrollbar{
+
+height:10px;
+
+}
+
+.assessment-table::-webkit-scrollbar-track{
+
+background:#f1f5f9;
+
+border-radius:20px;
+
+}
+
+.assessment-table::-webkit-scrollbar-thumb{
+
+background:#94a3b8;
+
+border-radius:20px;
+
+}
+
+.assessment-table::-webkit-scrollbar-thumb:hover{
+
+background:#64748b;
+
+}
+
+/* ==========================================================
+   ANIMATIONS
+========================================================== */
+
+@keyframes fadeIn{
+
+from{
+
+opacity:0;
+
+transform:translateY(12px);
+
+}
+
+to{
+
+opacity:1;
+
+transform:translateY(0);
+
+}
+
+}
+
+.assessment-card,
+.records-card,
+.assessment-title{
+
+animation:fadeIn .35s ease;
+
+}
+
+/* ==========================================================
+   UTILITIES
+========================================================== */
+
+.text-success{
+
+color:var(--success);
+
+font-weight:700;
+
+}
+
+.text-danger{
+
+color:var(--danger);
+
+font-weight:700;
+
+}
+
+.text-warning{
+
+color:var(--warning);
+
+font-weight:700;
+
+}
+
+.text-primary{
+
+color:var(--primary);
+
+font-weight:700;
+
+}
+
+.text-center{
+
+text-align:center;
+
+}
+
+.w-100{
+
+width:100%;
+
+}
