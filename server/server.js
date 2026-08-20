@@ -44,10 +44,10 @@ app.use(helmet());
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://aerolearn-client.onrender.com",
-    ],
+  origin: [
+    "http://localhost:5173",
+    "https://aerolearn-client.onrender.com",
+  ],
   })
 );
 
