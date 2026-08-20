@@ -1017,15 +1017,3 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
 }
-html,
-body,
-#root {
-  min-height: 100%;
-  height: auto;
-}
-
-html,
-body {
-  overflow-y: auto;
-  overflow-x: hidden;
-}
