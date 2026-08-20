@@ -79,24 +79,23 @@ function Login() {
     return (
 
     <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        background:
-          "linear-gradient(135deg,#0f172a,#1e3a8a,#2563eb)",
-        padding: "30px",
-      }}
+     style={{
+  minHeight: "100dvh",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "20px",
+  boxSizing: "border-box",
+}}
     >
 
       <div
         style={{
           width: "100%",
-          maxWidth: "470px",
+          maxWidth: "450px",
           background: "#ffffff",
           borderRadius: "24px",
-          padding: "45px",
+          padding: "24px",
           boxShadow:
             "0 25px 60px rgba(0,0,0,.35)",
         }}
@@ -105,7 +104,7 @@ function Login() {
         <div
           style={{
             textAlign: "center",
-            marginBottom: "35px",
+            marginBottom: "10px",
           }}
         >
 
@@ -147,7 +146,7 @@ function Login() {
 
           <p
             style={{
-              marginTop: "15px",
+              marginTop: "10px",
               color: "#64748b",
               lineHeight: 1.7,
             }}
@@ -167,7 +166,7 @@ function Login() {
               color: "#991b1b",
               padding: "14px",
               borderRadius: "12px",
-              marginBottom: "25px",
+              marginBottom: "10px",
               textAlign: "center",
               fontWeight: "600",
             }}
@@ -185,7 +184,7 @@ function Login() {
           <div
             style={{
               position: "relative",
-              marginBottom: "20px",
+              marginBottom: "10px",
             }}
           >
 
@@ -224,7 +223,7 @@ function Login() {
           <div
             style={{
               position: "relative",
-              marginBottom: "18px",
+              marginBottom: "10px",
             }}
           >
 
@@ -297,7 +296,7 @@ function Login() {
               justifyContent:
                 "space-between",
               alignItems: "center",
-              marginBottom: "25px",
+              marginBottom: "10px",
               fontSize: "14px",
             }}
           >
@@ -367,7 +366,7 @@ function Login() {
 
         <div
           style={{
-            marginTop: "35px",
+            marginTop: "10px",
             textAlign: "center",
             borderTop: "1px solid #e5e7eb",
             paddingTop: "20px",
@@ -412,5 +411,6 @@ function Login() {
   );
 
 }
+
 
 export default Login;
