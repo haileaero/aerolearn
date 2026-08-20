@@ -49,9 +49,11 @@ export const getLearningMaterials = async (
 ) => {
   try {
     const learningMaterials =
-      await LearningMaterial.find().sort({
-        createdAt: -1,
-      });
+  await LearningMaterial.find()
+    .populate("course", "name title")
+    .sort({
+      createdAt: -1,
+    });
 
     res.status(200).json(
       learningMaterials
