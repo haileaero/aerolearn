@@ -594,13 +594,13 @@ function LearningMaterials() {
               "Video" &&
               material.file && (
                 <a
-                  href={`http://localhost:5000${material.file}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) =>
-                    e.stopPropagation()
-                  }
-                >
+  href={`${import.meta.env.VITE_API_URL?.replace("/api", "")}${material.file}`}
+  target="_blank"
+  rel="noreferrer"
+  onClick={(e) =>
+    e.stopPropagation()
+  }
+>
                   📄 Open File
                 </a>
               )}
