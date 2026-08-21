@@ -58,9 +58,13 @@ function Login() {
           form
         );
 
-      login(data);
+     login(data);
 
-      navigate("/dashboard");
+if (data.role === "Student") {
+  navigate("/my-courses");
+} else {
+  navigate("/dashboard");
+}
 
     } catch (err) {
 
