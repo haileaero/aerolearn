@@ -593,16 +593,16 @@ function LearningMaterials() {
             {material.category !==
               "Video" &&
               material.file && (
-                <a
-  href={`${import.meta.env.VITE_API_URL?.replace("/api", "")}${material.file}`}
+               <a
+  href={material.file}
   target="_blank"
-  rel="noreferrer"
+  rel="noopener noreferrer"
   onClick={(e) =>
     e.stopPropagation()
   }
 >
-                  📄 Open File
-                </a>
+  📄 Open File
+</a>
               )}
 
             {(material.category ===

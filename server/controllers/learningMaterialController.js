@@ -1,6 +1,62 @@
 import LearningMaterial from "../models/learningMaterial.js";
+import cloudinary from "../config/cloudinary.js";
+import { Readable } from "stream";
+import path from "path";
+import crypto from "crypto";
 
-// Create Learning Material
+/* ============================================================
+   UPLOAD FILE TO CLOUDINARY
+============================================================ */
+
+const uploadToCloudinary = (file) => {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.buffer) {
+      return reject(
+        new Error("No file buffer received.")
+      );
+    }
+
+    const extension = path
+      .extname(file.originalname)
+      .toLowerCase();
+
+    const originalName = path
+      .basename(
+        file.originalname,
+        extension
+      )
+      .replace(/\s+/g, "-")
+      .replace(/[^a-zA-Z0-9-_]/g, "");
+
+    const publicId =
+      `${Date.now()}-${crypto.randomUUID()}-${originalName}${extension}`;
+
+    const uploadStream =
+      cloudinary.uploader.upload_stream(
+        {
+          resource_type: "raw",
+          folder: "aerolearn/materials",
+          public_id: publicId,
+        },
+        (error, result) => {
+          if (error) {
+            return reject(error);
+          }
+
+          resolve(result);
+        }
+      );
+
+    Readable
+      .from(file.buffer)
+      .pipe(uploadStream);
+  });
+};
+
+/* ============================================================
+   CREATE LEARNING MATERIAL
+============================================================ */
+
 export const createLearningMaterial = async (
   req,
   res
@@ -16,10 +72,24 @@ export const createLearningMaterial = async (
 
     let file = "";
 
+    /* --------------------------------------------------------
+       VIDEO
+       Videos use YouTube URLs instead of file uploads.
+    -------------------------------------------------------- */
+
     if (category === "Video") {
-      file = req.body.file;
-    } else if (req.file) {
-      file = `/uploads/materials/${req.file.filename}`;
+      file = req.body.file || "";
+    }
+
+    /* --------------------------------------------------------
+       DOCUMENT / FILE
+    -------------------------------------------------------- */
+
+    else if (req.file) {
+      const result =
+        await uploadToCloudinary(req.file);
+
+      file = result.secure_url;
     }
 
     const learningMaterial =
@@ -35,37 +105,60 @@ export const createLearningMaterial = async (
     res.status(201).json(
       learningMaterial
     );
+
   } catch (error) {
+    console.error(
+      "CREATE LEARNING MATERIAL ERROR:",
+      error
+    );
+
     res.status(500).json({
-      message: error.message,
+      message:
+        error.message ||
+        "Failed to create learning material.",
     });
   }
 };
 
-// Get All Learning Materials
+/* ============================================================
+   GET ALL LEARNING MATERIALS
+============================================================ */
+
 export const getLearningMaterials = async (
   req,
   res
 ) => {
   try {
     const learningMaterials =
-  await LearningMaterial.find()
-    .populate("course", "name title")
-    .sort({
-      createdAt: -1,
-    });
+      await LearningMaterial.find()
+        .populate(
+          "course",
+          "name title code"
+        )
+        .sort({
+          createdAt: -1,
+        });
 
     res.status(200).json(
       learningMaterials
     );
+
   } catch (error) {
+    console.error(
+      "GET LEARNING MATERIALS ERROR:",
+      error
+    );
+
     res.status(500).json({
       message: error.message,
     });
   }
 };
 
-// Get Learning Material By ID
+/* ============================================================
+   GET LEARNING MATERIAL BY ID
+============================================================ */
+
 export const getLearningMaterialById =
   async (req, res) => {
     try {
@@ -84,6 +177,7 @@ export const getLearningMaterialById =
       res.status(200).json(
         learningMaterial
       );
+
     } catch (error) {
       res.status(500).json({
         message: error.message,
@@ -91,7 +185,10 @@ export const getLearningMaterialById =
     }
   };
 
-// Update Learning Material
+/* ============================================================
+   UPDATE LEARNING MATERIAL
+============================================================ */
+
 export const updateLearningMaterial =
   async (req, res) => {
     try {
@@ -127,33 +224,62 @@ export const updateLearningMaterial =
         req.body.dueDate ??
         learningMaterial.dueDate;
 
+      /* ------------------------------------------------------
+         VIDEO
+      ------------------------------------------------------ */
+
       if (
         req.body.category === "Video"
       ) {
         learningMaterial.file =
-          req.body.file;
-      } else if (req.file) {
+          req.body.file ||
+          learningMaterial.file;
+      }
+
+      /* ------------------------------------------------------
+         NEW FILE
+      ------------------------------------------------------ */
+
+      else if (req.file) {
+        const result =
+          await uploadToCloudinary(
+            req.file
+          );
+
         learningMaterial.file =
-          `/uploads/materials/${req.file.filename}`;
+          result.secure_url;
       }
 
       const updated =
         await learningMaterial.save();
 
-      res.status(200).json(updated);
+      res.status(200).json(
+        updated
+      );
+
     } catch (error) {
+      console.error(
+        "UPDATE LEARNING MATERIAL ERROR:",
+        error
+      );
+
       res.status(500).json({
-        message: error.message,
+        message:
+          error.message ||
+          "Failed to update learning material.",
       });
     }
   };
 
-// Delete Learning Material
+/* ============================================================
+   DELETE LEARNING MATERIAL
+============================================================ */
+
 export const deleteLearningMaterial =
   async (req, res) => {
     try {
       const learningMaterial =
-        await LearningMaterial.findByIdAndDelete(
+        await LearningMaterial.findById(
           req.params.id
         );
 
@@ -164,11 +290,69 @@ export const deleteLearningMaterial =
         });
       }
 
+      /* ------------------------------------------------------
+         Delete Cloudinary file if this is a Cloudinary URL.
+         We intentionally don't fail the database deletion if
+         Cloudinary deletion fails.
+      ------------------------------------------------------ */
+
+      if (
+        learningMaterial.file &&
+        learningMaterial.file.includes(
+          "res.cloudinary.com"
+        )
+      ) {
+        try {
+          const url =
+            learningMaterial.file;
+
+          const uploadIndex =
+            url.indexOf(
+              "/aerolearn/materials/"
+            );
+
+          if (uploadIndex !== -1) {
+            const publicPath =
+              url.substring(
+                uploadIndex +
+                  "/aerolearn/materials/"
+                    .length
+              );
+
+            const publicId =
+              `aerolearn/materials/${publicPath}`;
+
+            await cloudinary.uploader.destroy(
+              publicId,
+              {
+                resource_type: "raw",
+              }
+            );
+          }
+
+        } catch (cloudinaryError) {
+          console.error(
+            "Cloudinary delete warning:",
+            cloudinaryError.message
+          );
+        }
+      }
+
+      await LearningMaterial.findByIdAndDelete(
+        req.params.id
+      );
+
       res.status(200).json({
         message:
           "Learning material deleted successfully",
       });
+
     } catch (error) {
+      console.error(
+        "DELETE LEARNING MATERIAL ERROR:",
+        error
+      );
+
       res.status(500).json({
         message: error.message,
       });
