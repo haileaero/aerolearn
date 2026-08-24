@@ -6,9 +6,9 @@ function ProtectedRoute({
   children,
   roles = [],
 }) {
-  const { user, loading } =
-    useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
 
+  // Wait for authentication to initialize
   if (loading) {
     return (
       <div
@@ -26,6 +26,7 @@ function ProtectedRoute({
     );
   }
 
+  // Not logged in
   if (!user) {
     return (
       <Navigate
@@ -35,10 +36,20 @@ function ProtectedRoute({
     );
   }
 
+  // User does not have permission for this route
   if (
     roles.length > 0 &&
     !roles.includes(user.role)
   ) {
+    if (user.role === "Student") {
+      return (
+        <Navigate
+          to="/my-courses"
+          replace
+        />
+      );
+    }
+
     return (
       <Navigate
         to="/dashboard"

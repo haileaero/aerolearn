@@ -38,14 +38,14 @@ function AppRoutes() {
 
       {/* ================= DASHBOARD ================= */}
 
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
+     <Route
+  path="/dashboard"
+  element={
+    <ProtectedRoute roles={["Admin", "Instructor"]}>
+      <Dashboard />
+    </ProtectedRoute>
+  }
+/>
 
       {/* ================= ADMIN ================= */}
 

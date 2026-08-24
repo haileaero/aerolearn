@@ -59,7 +59,8 @@ function Login() {
         );
 
      login(data);
-
+console.log("LOGIN DATA:", data);
+console.log("USER ROLE:", data.role);
 if (data.role === "Student") {
   navigate("/my-courses");
 } else {
@@ -341,13 +342,13 @@ if (data.role === "Student") {
             style={{
               width: "100%",
               padding: "15px",
-              borderRadius: "12px",
+              borderRadius: "10px",
               border: "none",
               background:
                 "linear-gradient(135deg,#2563eb,#1d4ed8)",
               color: "#fff",
-              fontWeight: "700",
-              fontSize: "16px",
+              fontWeight: "500",
+              fontSize: "12px",
               cursor: "pointer",
             }}
           >
