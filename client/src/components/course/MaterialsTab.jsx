@@ -72,7 +72,7 @@ function MaterialsTab({ materials }) {
     }
 
     // Local uploaded file
-    return `http://localhost:5000${file}`;
+   return `${import.meta.env.VITE_API_URL?.replace("/api", "")}${file}`;
   };
 
   // Convert YouTube URL to embedded player
