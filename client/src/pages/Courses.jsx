@@ -530,17 +530,20 @@ function Courses() {
               }}
             >
               <img
-                src={
-                  course.thumbnail ||
-                  "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200"
-                }
-                alt={course.name}
-                style={{
-                  width: "100%",
-                  height: "220px",
-                  objectFit: "cover",
-                }}
-              />
+  src={
+    course.thumbnail ||
+    "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200"
+  }
+  alt={course.name}
+  style={{
+    width: "100%",
+    height: "220px",
+    objectFit: "contain",
+    objectPosition: "center",
+    backgroundColor: "#061a33",
+    display: "block",
+  }}
+/>
 
               <div style={{ padding: "24px" }}>
                 <h2>{course.name}</h2>
