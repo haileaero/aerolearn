@@ -537,10 +537,7 @@ function Courses() {
   alt={course.name}
   style={{
     width: "100%",
-    height: "220px",
-    objectFit: "contain",
-    objectPosition: "center",
-    backgroundColor: "#061a33",
+    height: "auto",
     display: "block",
   }}
 />
