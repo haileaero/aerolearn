@@ -570,10 +570,10 @@ function Courses() {
 
                 <p>
                   <strong>Instructor:</strong>{" "}
-                  {typeof course.instructor ===
-                  "object"
-                    ? course.instructor.fullName
-                    : course.instructor || "-"}
+                  {course.instructor?.fullName ||
+  (typeof course.instructor === "string"
+    ? course.instructor
+    : "-")}
                 </p>
 
                 <p>
