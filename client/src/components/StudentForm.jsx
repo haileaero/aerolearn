@@ -127,19 +127,15 @@ function StudentForm({
     if (!selected) return;
 
     setStudent((prev) => ({
-      ...prev,
-      user: selected._id,
-      studentId:
-        selected.studentId || "",
-      fullName:
-        selected.fullName || "",
-      email:
-        selected.email || "",
-      phone:
-        selected.phone || "",
-      department:
-        selected.department || "",
-    }));
+  ...prev,
+  user: selected._id,
+  studentId: selected.studentId || "",
+  fullName: selected.fullName || "",
+  gender: selected.gender || "",
+  email: selected.email || "",
+  phone: selected.phone || "",
+  department: selected.department || "",
+}));
   };
   // ===============================
 // Submit Student
@@ -148,17 +144,21 @@ function StudentForm({
 const submit = async (e) => {
   e.preventDefault();
 
-  if (
-    !student.user ||
-    !student.studentId ||
-    !student.fullName ||
-    !student.gender ||
-    !student.email ||
-    !student.department
-  ) {
-    alert("Please select an existing student user and complete the required fields.");
-    return;
-  }
+ const missingFields = [];
+
+if (!student.user) missingFields.push("Existing User");
+if (!student.studentId) missingFields.push("Student ID");
+if (!student.fullName) missingFields.push("Full Name");
+if (!student.gender) missingFields.push("Gender");
+if (!student.email) missingFields.push("Email");
+if (!student.department) missingFields.push("Department");
+
+if (missingFields.length > 0) {
+  alert(
+    `Please complete the following required fields:\n${missingFields.join(", ")}`
+  );
+  return;
+}
 
   if (editingStudent) {
     await onUpdate(student);
