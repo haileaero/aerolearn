@@ -23,6 +23,7 @@ function StudentForm({
 
   const [student, setStudent] =
     useState(emptyStudent);
+  const [formError, setFormError] = useState("");
 
   const [studentUsers, setStudentUsers] =
     useState([]);
@@ -57,10 +58,7 @@ function StudentForm({
 
       setStudentUsers(students);
 
-      console.log(
-        "Student Users:",
-        students
-      );
+
     } catch (err) {
       console.error(
         "Unable to load student users",
@@ -85,7 +83,9 @@ function StudentForm({
   // ===============================
 
   useEffect(() => {
-    if (editingStudent) {
+    setFormError("");
+
+  if (editingStudent) {
       setStudent({
         ...emptyStudent,
         ...editingStudent,
@@ -154,12 +154,11 @@ if (!student.email) missingFields.push("Email");
 if (!student.department) missingFields.push("Department");
 
 if (missingFields.length > 0) {
-  alert(
-    `Please complete the following required fields:\n${missingFields.join(", ")}`
-  );
+  setFormError(`Please complete: ${missingFields.join(", ")}.`);
   return;
 }
 
+  setFormError("");
   if (editingStudent) {
     await onUpdate(student);
   } else {
@@ -175,35 +174,16 @@ if (missingFields.length > 0) {
 // ===============================
 
 return (
-  <div
-    style={{
-      background: "#fff",
-      padding: "30px",
-      borderRadius: "18px",
-      boxShadow: "0 8px 25px rgba(0,0,0,.08)",
-      marginBottom: "35px",
-    }}
-  >
-    <h2
-      style={{
-        marginBottom: "25px",
-        color: "#1e3a8a",
-      }}
-    >
+  <div className="al-compact-form">
+    <h2>
       {editingStudent
         ? "Update Student"
         : "Register New Student"}
     </h2>
 
     <form onSubmit={submit}>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit,minmax(260px,1fr))",
-          gap: "18px",
-        }}
-      >
+      <div className="al-form-grid al-form-grid-student">
+        {formError && <div className="al-form-error">{formError}</div>}
         {/* Department Selection */}
 
 <select
@@ -440,22 +420,7 @@ return (
 </select>
       </div>
 
-      <button
-        type="submit"
-        style={{
-          marginTop: "30px",
-          background: editingStudent
-            ? "#f59e0b"
-            : "#2563eb",
-          color: "#fff",
-          border: "none",
-          padding: "14px 28px",
-          borderRadius: "10px",
-          cursor: "pointer",
-          fontWeight: "600",
-          fontSize: "15px",
-        }}
-      >
+      <button type="submit" className="al-form-submit">
         {editingStudent
           ? "Update Student"
           : "Register Student"}

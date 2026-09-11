@@ -1,31 +1,16 @@
 import express from "express";
 import upload from "../config/multer.js";
+import {
+  protect,
+  authorize,
+} from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-/*
-|--------------------------------------------------------------------------
-| Upload Documents Only
-|--------------------------------------------------------------------------
-|
-| Videos are handled using YouTube URLs.
-| Supported uploads:
-| PDF
-| DOC
-| DOCX
-| PPT
-| PPTX
-| XLS
-| XLSX
-| ZIP
-| RAR
-| JPG
-| PNG
-|--------------------------------------------------------------------------
-*/
-
 router.post(
   "/",
+  protect,
+  authorize("Admin", "Instructor"),
   upload.single("file"),
   (req, res) => {
     if (!req.file) {
@@ -35,7 +20,7 @@ router.post(
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       fileName: req.file.filename,
       originalName: req.file.originalname,

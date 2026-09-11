@@ -11,78 +11,32 @@ import {
   getStudentStatistics,
 } from "../controllers/studentController.js";
 
+import {
+  protect,
+  authorize,
+} from "../middleware/authMiddleware.js";
+
 const router = express.Router();
 
-/* =====================================
-   Student Statistics
-===================================== */
+router.use(protect);
 
-router.get(
-  "/statistics",
-  getStudentStatistics
-);
+// Aggregate and directory-style student data is staff-only.
+router.get("/statistics", authorize("Admin", "Instructor"), getStudentStatistics);
+router.get("/search", authorize("Admin", "Instructor"), searchStudents);
+router.get("/", authorize("Admin", "Instructor"), getStudents);
 
-/* =====================================
-   Search Students
-===================================== */
-
-router.get(
-  "/search",
-  searchStudents
-);
-
-/* =====================================
-   Student Profile (for logged-in student)
-===================================== */
-
+// The existing profile endpoint is used by student-facing views too.
 router.get(
   "/profile/:studentId",
+  authorize("Admin", "Instructor", "Student"),
   getStudentProfile
 );
 
-/* =====================================
-   Get All Students
-===================================== */
+router.get("/:id", authorize("Admin", "Instructor"), getStudentById);
 
-router.get(
-  "/",
-  getStudents
-);
-
-/* =====================================
-   Get Student By ID
-===================================== */
-
-router.get(
-  "/:id",
-  getStudentById
-);
-
-/* =====================================
-   Create Student
-===================================== */
-
-router.post(
-  "/",
-  createStudent
-);
-
-/* =====================================
-   Update Student
-===================================== */
-
-router.put(
-  "/:id",
-  updateStudent
-);
-
-/* =====================================
-   Delete Student
-===================================== */
-
-router.delete(
-  "/:id",
-  deleteStudent
-);
+// Student records are administrative master data.
+router.post("/", authorize("Admin"), createStudent);
+router.put("/:id", authorize("Admin"), updateStudent);
+router.delete("/:id", authorize("Admin"), deleteStudent);
 
 export default router;

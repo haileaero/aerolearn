@@ -10,33 +10,20 @@ import {
 
 import {
   protect,
+  authorize,
 } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// ======================================
-// Get All Courses
-// ======================================
-router.get("/", protect, getCourses);
+router.use(protect);
 
-// ======================================
-// Get One Course
-// ======================================
-router.get("/:id", protect, getCourseById);
+// All authenticated roles may view course information.
+router.get("/", authorize("Admin", "Instructor", "Student"), getCourses);
+router.get("/:id", authorize("Admin", "Instructor", "Student"), getCourseById);
 
-// ======================================
-// Create Course
-// ======================================
-router.post("/", protect, createCourse);
-
-// ======================================
-// Update Course
-// ======================================
-router.put("/:id", protect, updateCourse);
-
-// ======================================
-// Delete Course
-// ======================================
-router.delete("/:id", protect, deleteCourse);
+// Course master data is administered centrally.
+router.post("/", authorize("Admin", "Instructor"), createCourse);
+router.put("/:id", authorize("Admin", "Instructor"), updateCourse);
+router.delete("/:id", authorize("Admin", "Instructor"), deleteCourse);
 
 export default router;

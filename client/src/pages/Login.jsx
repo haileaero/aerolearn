@@ -1,421 +1,133 @@
 import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import {
-  FaUserGraduate,
   FaEnvelope,
   FaLock,
   FaEye,
   FaEyeSlash,
   FaSignInAlt,
+  FaPlane,
+  FaBookOpen,
+  FaChartLine,
+  FaShieldAlt,
 } from "react-icons/fa";
-
 import api from "../api";
 import { AuthContext } from "../context/AuthContext";
 
 function Login() {
-
   const { login } = useContext(AuthContext);
-
   const navigate = useNavigate();
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
-
-  const [showPassword, setShowPassword] =
-    useState(false);
-
-  const handleChange = (e) => {
-
-    setForm((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-
+  const handleChange = (event) => {
+    setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
-  const handleSubmit = async (e) => {
-
-    e.preventDefault();
-
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setLoading(true);
-
     setError("");
 
     try {
-
-      const { data } =
-        await api.post(
-          "/auth/login",
-          form
-        );
-
-     login(data);
-console.log("LOGIN DATA:", data);
-console.log("USER ROLE:", data.role);
-if (data.role === "Student") {
-  navigate("/my-courses");
-} else {
-  navigate("/dashboard");
-}
-
+      const { data } = await api.post("/auth/login", form);
+      login(data);
+      navigate(data.role === "Student" ? "/my-courses" : "/dashboard");
     } catch (err) {
-
-      setError(
-        err.response?.data?.message ||
-        "Invalid email or password."
-      );
-
+      setError(err.response?.data?.message || "Invalid email or password.");
     } finally {
-
       setLoading(false);
-
     }
-
   };
-    return (
 
-    <div
-     style={{
-  minHeight: "100dvh",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "20px",
-  boxSizing: "border-box",
-}}
-    >
-
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "450px",
-          background: "#ffffff",
-          borderRadius: "24px",
-          padding: "24px",
-          boxShadow:
-            "0 25px 60px rgba(0,0,0,.35)",
-        }}
-      >
-
-        <div
-          style={{
-            textAlign: "center",
-            marginBottom: "10px",
-          }}
-        >
-
-          <div
-            style={{
-              width: "90px",
-              height: "90px",
-              borderRadius: "50%",
-              background: "#2563eb",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              margin: "0 auto 20px",
-              color: "#fff",
-              fontSize: "38px",
-            }}
-          >
-            <FaUserGraduate />
+  return (
+    <div className="login-page">
+      <section className="login-showcase">
+        <div className="login-brand">
+          <div className="login-brand-mark"><FaPlane /></div>
+          <div>
+            <strong>AeroLearn</strong>
+            <span>Academic Cloud</span>
           </div>
-
-          <h1
-            style={{
-              marginBottom: "10px",
-              color: "#1e3a8a",
-              fontSize: "34px",
-            }}
-          >
-            AeroLearn LMS
-          </h1>
-
-          <h3
-            style={{
-              color: "#475569",
-              fontWeight: "500",
-            }}
-          >
-            Ethiopian Defense University
-          </h3>
-
-          <p
-            style={{
-              marginTop: "10px",
-              color: "#64748b",
-              lineHeight: 1.7,
-            }}
-          >
-            Sign in to access your dashboard,
-            courses, attendance, assessments,
-            learning materials and announcements.
-          </p>
-
         </div>
 
-        {error && (
+        <div className="login-showcase-copy">
+          <span className="login-badge">Ethiopian Defense University</span>
+          <h1>One workspace for smarter learning.</h1>
+          <p>
+            Courses, assessments, attendance, learning resources and academic progress—organized in one secure digital campus for students, instructors and administrators.
+          </p>
 
-          <div
-            style={{
-              background: "#fee2e2",
-              color: "#991b1b",
-              padding: "14px",
-              borderRadius: "12px",
-              marginBottom: "10px",
-              textAlign: "center",
-              fontWeight: "600",
-            }}
-          >
-            ⚠ {error}
+          <div className="login-features">
+            <div className="login-feature">
+              <FaBookOpen />
+              <strong>Learn anywhere</strong>
+              <span>Course resources and academic content in one place.</span>
+            </div>
+            <div className="login-feature">
+              <FaChartLine />
+              <strong>Track progress</strong>
+              <span>Results, attendance and learning activity at a glance.</span>
+            </div>
+            <div className="login-feature">
+              <FaShieldAlt />
+              <strong>Role-secured</strong>
+              <span>Purpose-built access for every academic role.</span>
+            </div>
           </div>
+        </div>
 
-        )}
+        <div className="login-showcase-foot">Military Engineering College • Digital Learning Environment</div>
+      </section>
 
-        <form onSubmit={handleSubmit}>
-                    {/* ==========================
-              EMAIL
-          ========================== */}
+      <section className="login-auth">
+        <div className="login-card">
+          <span className="login-card-kicker">Welcome back</span>
+          <h2>Sign in to AeroLearn</h2>
+          <p className="login-card-subtitle">Use your institutional account to continue to your personalized learning workspace.</p>
 
-          <div
-            style={{
-              position: "relative",
-              marginBottom: "10px",
-            }}
-          >
+          {error && <div className="login-error">⚠ {error}</div>}
 
-            <FaEnvelope
-              style={{
-                position: "absolute",
-                left: "16px",
-                top: "16px",
-                color: "#64748b",
-              }}
-            />
+          <form className="login-form" onSubmit={handleSubmit}>
+            <div className="login-field">
+              <label htmlFor="email">Email address</label>
+              <div className="login-input-wrap">
+                <FaEnvelope />
+                <input id="email" type="email" name="email" placeholder="name@institution.edu" value={form.email} onChange={handleChange} required autoComplete="email" />
+              </div>
+            </div>
 
-            <input
-              type="email"
-              name="email"
-              placeholder="Email Address"
-              value={form.email}
-              onChange={handleChange}
-              required
-              style={{
-                width: "100%",
-                padding: "14px 14px 14px 48px",
-                borderRadius: "12px",
-                border: "1px solid #d1d5db",
-                fontSize: "15px",
-                outline: "none",
-              }}
-            />
+            <div className="login-field">
+              <label htmlFor="password">Password</label>
+              <div className="login-input-wrap">
+                <FaLock />
+                <input id="password" type={showPassword ? "text" : "password"} name="password" placeholder="Enter your password" value={form.password} onChange={handleChange} required autoComplete="current-password" />
+                <button className="login-password-toggle" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"}>
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+            </div>
 
-          </div>
+            <div className="login-options">
+              <label><input type="checkbox" /> Keep me signed in</label>
+              <span>Contact your system administrator</span>
+            </div>
 
-          {/* ==========================
-              PASSWORD
-          ========================== */}
-
-          <div
-            style={{
-              position: "relative",
-              marginBottom: "10px",
-            }}
-          >
-
-            <FaLock
-              style={{
-                position: "absolute",
-                left: "16px",
-                top: "16px",
-                color: "#64748b",
-              }}
-            />
-
-            <input
-              type={
-                showPassword
-                  ? "text"
-                  : "password"
-              }
-              name="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={handleChange}
-              required
-              style={{
-                width: "100%",
-                padding:
-                  "14px 50px 14px 48px",
-                borderRadius: "12px",
-                border: "1px solid #d1d5db",
-                fontSize: "15px",
-                outline: "none",
-              }}
-            />
-
-            <button
-              type="button"
-              onClick={() =>
-                setShowPassword(
-                  !showPassword
-                )
-              }
-              style={{
-                position: "absolute",
-                right: "14px",
-                top: "12px",
-                background: "none",
-                border: "none",
-                color: "#64748b",
-                cursor: "pointer",
-                fontSize: "18px",
-                padding: 0,
-              }}
-            >
-              {showPassword ? (
-                <FaEyeSlash />
-              ) : (
-                <FaEye />
-              )}
+            <button className="login-submit" type="submit" disabled={loading}>
+              <FaSignInAlt /> {loading ? "Signing in..." : "Sign in securely"}
             </button>
+          </form>
 
+          <div className="login-help">
+            Access is limited to authorized AeroLearn users.<br />
+            © 2026 AeroLearn Learning Management System
           </div>
-
-          {/* ==========================
-              OPTIONS
-          ========================== */}
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent:
-                "space-between",
-              alignItems: "center",
-              marginBottom: "10px",
-              fontSize: "14px",
-            }}
-          >
-
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                cursor: "pointer",
-              }}
-            >
-              <input type="checkbox" />
-
-              Remember Me
-
-            </label>
-
-            <span
-              style={{
-                color: "#2563eb",
-                cursor: "pointer",
-                fontWeight: "600",
-              }}
-            >
-              Forgot Password?
-            </span>
-
-          </div>
-
-          {/* ==========================
-              LOGIN BUTTON
-          ========================== */}
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: "100%",
-              padding: "15px",
-              borderRadius: "10px",
-              border: "none",
-              background:
-                "linear-gradient(135deg,#2563eb,#1d4ed8)",
-              color: "#fff",
-              fontWeight: "500",
-              fontSize: "12px",
-              cursor: "pointer",
-            }}
-          >
-            <FaSignInAlt
-              style={{
-                marginRight: "10px",
-              }}
-            />
-
-            {loading
-              ? "Signing In..."
-              : "Sign In"}
-
-          </button>
-                  </form>
-
-        {/* ==========================
-            FOOTER
-        ========================== */}
-
-        <div
-          style={{
-            marginTop: "10px",
-            textAlign: "center",
-            borderTop: "1px solid #e5e7eb",
-            paddingTop: "20px",
-          }}
-        >
-
-          <p
-            style={{
-              color: "#64748b",
-              fontSize: "14px",
-              marginBottom: "8px",
-            }}
-          >
-            AeroLearn Learning Management System
-          </p>
-
-          <p
-            style={{
-              color: "#94a3b8",
-              fontSize: "13px",
-            }}
-          >
-            Military Engineering College
-          </p>
-
-          <p
-            style={{
-              color: "#94a3b8",
-              fontSize: "12px",
-              marginTop: "10px",
-            }}
-          >
-            © 2026 AeroLearn LMS • Version 1.0
-          </p>
-
         </div>
-
-      </div>
-
+      </section>
     </div>
-
   );
-
 }
-
 
 export default Login;

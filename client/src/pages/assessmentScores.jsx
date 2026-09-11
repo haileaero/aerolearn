@@ -1,665 +1,154 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  FaArrowLeft,
+  FaCheckCircle,
+  FaClipboardCheck,
+  FaSave,
+  FaSearch,
+  FaUsers,
+} from "react-icons/fa";
 import Layout from "../components/Layout";
 import api from "../api";
-
-import {
-  FaClipboardCheck,
-  FaUsers,
-  FaChartBar,
-  FaSearch,
-  FaSave,
-  FaGraduationCap,
-} from "react-icons/fa";
+import "../styles/workspace.css";
 
 function AssessmentScores() {
   const { id } = useParams();
-
+  const navigate = useNavigate();
   const [assessment, setAssessment] = useState(null);
-
+  const [scores, setScores] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [saving, setSaving] = useState(false);
-
   const [search, setSearch] = useState("");
-
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    loadAssessment();
-  }, []);
     const loadAssessment = async () => {
-    try {
-      setLoading(true);
+      try {
+        setLoading(true);
+        setError("");
+        const response = await api.get(`/assessment/${id}`);
+        setAssessment(response.data);
+        setScores(
+          (response.data.scores || []).map((item) => ({
+            student: item.student?._id || item.student,
+            studentData: item.student,
+            score: item.score === 0 ? "" : item.score,
+            remark: item.remark || "",
+          }))
+        );
+      } catch (err) {
+        setError(err.response?.data?.message || "Unable to load this score sheet.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadAssessment();
+  }, [id]);
 
-      const res = await api.get(`/assessment/${id}`);
+  const maxScore = Number(assessment?.totalMark) || 100;
+  const entered = scores.filter((item) => item.score !== "").length;
+  const average = entered
+    ? scores.reduce((sum, item) => sum + (item.score === "" ? 0 : Number(item.score) || 0), 0) / entered
+    : 0;
 
-      setAssessment(res.data);
-    } catch (err) {
-      console.log(err);
+  const filtered = useMemo(() => {
+    const term = search.toLowerCase();
+    return scores
+      .map((item, index) => ({ ...item, sourceIndex: index }))
+      .filter((item) => `${item.studentData?.studentId || ""} ${item.studentData?.fullName || ""}`.toLowerCase().includes(term));
+  }, [scores, search]);
 
-      setMessage("Unable to load assessment.");
-    } finally {
-      setLoading(false);
+  const updateScore = (index, value) => {
+    if (value !== "") {
+      const numeric = Number(value);
+      if (numeric < 0 || numeric > maxScore) return;
     }
-  };
-
-  const handleScoreChange = (index, value) => {
-    const updated = { ...assessment };
-
-    updated.scores[index].score = Number(value);
-
-    setAssessment(updated);
+    setScores((prev) => prev.map((item, i) => (i === index ? { ...item, score: value } : item)));
   };
 
   const saveScores = async () => {
     try {
       setSaving(true);
-
-      await api.put(
-        `/assessment/${id}/scores`,
-        {
-          scores: assessment.scores,
-        }
-      );
-
-      setMessage(
-        "✅ Scores saved successfully."
-      );
+      setError("");
+      setMessage("");
+      const payload = scores.map((item) => ({
+        student: item.student,
+        score: item.score === "" ? 0 : Number(item.score),
+        remark: item.remark || "",
+      }));
+      await api.put(`/assessment/${id}/scores`, { scores: payload });
+      setMessage("Score sheet saved successfully.");
     } catch (err) {
-      setMessage(
-        err.response?.data?.message ||
-          "Unable to save scores."
-      );
+      setError(err.response?.data?.message || "Unable to save scores.");
     } finally {
       setSaving(false);
     }
   };
 
-  const filteredStudents = useMemo(() => {
-    if (!assessment) return [];
-
-    return assessment.scores.filter((student) =>
-      (
-        student.student.fullName +
-        student.student.studentId
-      )
-        .toLowerCase()
-        .includes(search.toLowerCase())
-    );
-  }, [assessment, search]);
-
-  const statistics = useMemo(() => {
-    if (!assessment)
-      return {
-        total: 0,
-        average: 0,
-        highest: 0,
-        lowest: 0,
-        passRate: 0,
-      };
-
-    const scores =
-      assessment.scores.map(
-        (s) => Number(s.score) || 0
-      );
-
-    const total = scores.length;
-
-    const average =
-      total === 0
-        ? 0
-        : (
-            scores.reduce(
-              (a, b) => a + b,
-              0
-            ) / total
-          ).toFixed(1);
-
-    const highest =
-      total === 0 ? 0 : Math.max(...scores);
-
-    const lowest =
-      total === 0 ? 0 : Math.min(...scores);
-
-    const passRate =
-      total === 0
-        ? 0
-        : Math.round(
-            (scores.filter(
-              (score) =>
-                score >=
-                assessment.totalMark * 0.5
-            ).length /
-              total) *
-              100
-          );
-
-    return {
-      total,
-      average,
-      highest,
-      lowest,
-      passRate,
-    };
-  }, [assessment]);
-    if (loading) {
-    return (
-      <Layout>
-        <div
-          style={{
-            background: "#fff",
-            padding: "60px",
-            borderRadius: "20px",
-            textAlign: "center",
-          }}
-        >
-          <h2>Loading assessment...</h2>
-        </div>
-      </Layout>
-    );
+  if (loading) {
+    return <Layout><div className="score-sheet-loading">Opening score sheet…</div></Layout>;
   }
 
   return (
     <Layout>
+      <div className="score-command-page">
+        <nav className="ops-flow assessment-flow" aria-label="Academic operations">
+          <span><b>1</b> Attendance</span><span><b>2</b> Assessment</span><span className="active"><b>3</b> Scores</span><span><b>4</b> Results</span><span><b>5</b> Resources</span>
+        </nav>
 
-      {/* ==========================
-          Header
-      ========================== */}
+        <header className="score-command-head">
+          <div className="score-title-wrap">
+            <button className="score-back" onClick={() => navigate("/assessment")} title="Back to assessments"><FaArrowLeft /></button>
+            <div><span className="al-eyebrow">SCORE ENTRY</span><h1>{assessment?.title || "Assessment"}</h1><p>{assessment?.course?.code ? `${assessment.course.code} — ${assessment.course.name}` : assessment?.category} · Week {assessment?.week} · {assessment?.weight}% course contribution</p></div>
+          </div>
+          <button className="score-save-main" onClick={saveScores} disabled={saving}><FaSave /> {saving ? "Saving…" : "Save score sheet"}</button>
+        </header>
 
-      <div
-        style={{
-          background:
-            "linear-gradient(135deg,#2563eb,#3b82f6)",
-          color: "#fff",
-          padding: "35px",
-          borderRadius: "20px",
-          marginBottom: "30px",
-          boxShadow:
-            "0 12px 30px rgba(37,99,235,.25)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent:
-              "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "25px",
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                margin: 0,
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-              }}
-            >
-              <FaClipboardCheck />
+        {message && <div className="message-strip success">✓ {message}</div>}
+        {error && <div className="message-strip error">{error}</div>}
 
-              {assessment.title}
-            </h1>
+        <div className="score-kpis">
+          <div><span><FaUsers /></span><strong>{scores.length}</strong><small>Students</small></div>
+          <div><span><FaCheckCircle /></span><strong>{entered}</strong><small>Entered</small></div>
+          <div><span className="pending-dot">•</span><strong>{Math.max(scores.length - entered, 0)}</strong><small>Remaining</small></div>
+          <div><span className="percent-symbol">%</span><strong>{average.toFixed(1)}</strong><small>Class average</small></div>
+        </div>
 
-            <p
-              style={{
-                marginTop: "15px",
-                opacity: ".9",
-              }}
-            >
-              {assessment.course?.code}
-              {" • "}
-              {assessment.course?.name}
-            </p>
+        <section className="score-sheet-card">
+          <div className="score-sheet-toolbar">
+            <div><h2><FaClipboardCheck /> Student score sheet</h2><span>Enter {maxScore === 100 ? "percentage scores" : `scores out of ${maxScore}`} for each student.</span></div>
+            <div className="score-sheet-search"><FaSearch /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search student or ID" /></div>
           </div>
 
-          <div
-            style={{
-              background:
-                "rgba(255,255,255,.15)",
-              padding: "20px",
-              borderRadius: "16px",
-              textAlign: "center",
-              minWidth: "180px",
-            }}
-          >
-            <FaGraduationCap
-              size={35}
-            />
-
-            <h2
-              style={{
-                margin: "10px 0 5px",
-              }}
-            >
-              {assessment.totalMark}
-            </h2>
-
-            <small>Total Marks</small>
-          </div>
-        </div>
-      </div>
-
-      {/* ==========================
-          Notification
-      ========================== */}
-
-      {message && (
-        <div
-          style={{
-            background: "#ecfeff",
-            color: "#0f766e",
-            padding: "16px",
-            borderRadius: "12px",
-            marginBottom: "25px",
-            border:
-              "1px solid #99f6e4",
-          }}
-        >
-          {message}
-        </div>
-      )}
-
-      {/* ==========================
-          Statistics
-      ========================== */}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit,minmax(220px,1fr))",
-          gap: "20px",
-          marginBottom: "30px",
-        }}
-      >
-        <div
-          style={{
-            background: "#fff",
-            padding: "25px",
-            borderRadius: "16px",
-            boxShadow:
-              "0 8px 20px rgba(0,0,0,.08)",
-          }}
-        >
-          <FaUsers
-            color="#2563eb"
-            size={28}
-          />
-
-          <h3>Students</h3>
-
-          <h1>{statistics.total}</h1>
-        </div>
-
-        <div
-          style={{
-            background: "#fff",
-            padding: "25px",
-            borderRadius: "16px",
-            boxShadow:
-              "0 8px 20px rgba(0,0,0,.08)",
-          }}
-        >
-          <FaChartBar
-            color="#16a34a"
-            size={28}
-          />
-
-          <h3>Average</h3>
-
-          <h1>{statistics.average}</h1>
-        </div>
-
-        <div
-          style={{
-            background: "#fff",
-            padding: "25px",
-            borderRadius: "16px",
-            boxShadow:
-              "0 8px 20px rgba(0,0,0,.08)",
-          }}
-        >
-          <FaGraduationCap
-            color="#9333ea"
-            size={28}
-          />
-
-          <h3>Highest</h3>
-
-          <h1>{statistics.highest}</h1>
-        </div>
-
-        <div
-          style={{
-            background: "#fff",
-            padding: "25px",
-            borderRadius: "16px",
-            boxShadow:
-              "0 8px 20px rgba(0,0,0,.08)",
-          }}
-        >
-          <FaClipboardCheck
-            color="#dc2626"
-            size={28}
-          />
-
-          <h3>Pass Rate</h3>
-
-          <h1>{statistics.passRate}%</h1>
-        </div>
-      </div>
-
-      {/* ==========================
-          Search
-      ========================== */}
-
-      <div
-        style={{
-          position: "relative",
-          marginBottom: "30px",
-        }}
-      >
-        <FaSearch
-          style={{
-            position: "absolute",
-            left: "15px",
-            top: "16px",
-            color: "#666",
-          }}
-        />
-
-        <input
-          type="text"
-          placeholder="Search student..."
-          value={search}
-          onChange={(e) =>
-            setSearch(e.target.value)
-          }
-          style={{
-            width: "100%",
-            padding:
-              "14px 14px 14px 45px",
-            borderRadius: "12px",
-            border:
-              "1px solid #ddd",
-            fontSize: "15px",
-          }}
-        />
-      </div>
-            {/* ==========================
-          Student Scores
-      ========================== */}
-
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: "18px",
-          boxShadow:
-            "0 8px 20px rgba(0,0,0,.08)",
-          overflow: "hidden",
-        }}
-      >
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-          }}
-        >
-          <thead
-            style={{
-              background: "#2563eb",
-              color: "#fff",
-            }}
-          >
-            <tr>
-              <th style={{ padding: "16px" }}>
-                Student
-              </th>
-
-              <th style={{ padding: "16px" }}>
-                Student ID
-              </th>
-
-              <th style={{ padding: "16px" }}>
-                Score
-              </th>
-
-              <th style={{ padding: "16px" }}>
-                Percentage
-              </th>
-
-              <th style={{ padding: "16px" }}>
-                Grade
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filteredStudents.length === 0 ? (
-              <tr>
-                <td
-                  colSpan="5"
-                  style={{
-                    textAlign: "center",
-                    padding: "40px",
-                  }}
-                >
-                  No students found.
-                </td>
-              </tr>
-            ) : (
-              filteredStudents.map(
-                (student, index) => {
-                  const percentage =
-                    assessment.totalMark === 0
-                      ? 0
-                      : Math.round(
-                          (student.score /
-                            assessment.totalMark) *
-                            100
-                        );
-
-                  let grade = "F";
-                  let color = "#dc2626";
-
-                  if (percentage >= 90) {
-                    grade = "A";
-                    color = "#16a34a";
-                  } else if (
-                    percentage >= 80
-                  ) {
-                    grade = "B";
-                    color = "#2563eb";
-                  } else if (
-                    percentage >= 70
-                  ) {
-                    grade = "C";
-                    color = "#ca8a04";
-                  } else if (
-                    percentage >= 50
-                  ) {
-                    grade = "D";
-                    color = "#ea580c";
-                  }
-
-                  return (
-                    <tr
-                      key={
-                        student.student._id
-                      }
-                      style={{
-                        borderBottom:
-                          "1px solid #eee",
-                      }}
-                    >
-                      <td
-                        style={{
-                          padding: "18px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems:
-                              "center",
-                            gap: "15px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: "45px",
-                              height: "45px",
-                              borderRadius:
-                                "50%",
-                              background:
-                                "#2563eb",
-                              color: "#fff",
-                              display: "flex",
-                              justifyContent:
-                                "center",
-                              alignItems:
-                                "center",
-                              fontWeight:
-                                "bold",
-                            }}
-                          >
-                            {student.student.fullName
-                              ?.split(" ")
-                              .map(
-                                (n) => n[0]
-                              )
-                              .join("")
-                              .toUpperCase()}
-                          </div>
-
-                          <div>
-                            <strong>
-                              {
-                                student.student
-                                  .fullName
-                              }
-                            </strong>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td
-                        style={{
-                          padding: "18px",
-                        }}
-                      >
-                        {
-                          student.student
-                            .studentId
-                        }
-                      </td>
-
-                      <td
-                        style={{
-                          padding: "18px",
-                        }}
-                      >
-                        <input
-                          type="number"
-                          min="0"
-                          max={
-                            assessment.totalMark
-                          }
-                          value={
-                            student.score
-                          }
-                          onChange={(e) =>
-                            handleScoreChange(
-                              index,
-                              e.target.value
-                            )
-                          }
-                          style={{
-                            width: "90px",
-                            padding: "10px",
-                            borderRadius:
-                              "8px",
-                            border:
-                              "1px solid #ccc",
-                          }}
-                        />
-                      </td>
-
-                      <td
-                        style={{
-                          padding: "18px",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {percentage}%
-                      </td>
-
-                      <td
-                        style={{
-                          padding: "18px",
-                        }}
-                      >
-                        <span
-                          style={{
-                            background:
-                              color,
-                            color: "#fff",
-                            padding:
-                              "6px 14px",
-                            borderRadius:
-                              "20px",
-                            fontWeight:
-                              "bold",
-                          }}
-                        >
-                          {grade}
-                        </span>
-                      </td>
+          {scores.length === 0 ? (
+            <div className="assessment-empty"><strong>No students on this assessment</strong><span>The course needs enrolled students before scores can be entered.</span></div>
+          ) : (
+            <div className="score-table-wrap">
+              <table className="score-entry-table">
+                <thead><tr><th>#</th><th>Student ID</th><th>Student</th><th>{maxScore === 100 ? "Score (%)" : `Score / ${maxScore}`}</th><th>Status</th></tr></thead>
+                <tbody>
+                  {filtered.map((item, displayIndex) => (
+                    <tr key={item.student || displayIndex}>
+                      <td>{displayIndex + 1}</td>
+                      <td><span className="table-id">{item.studentData?.studentId || "—"}</span></td>
+                      <td><strong>{item.studentData?.fullName || "Student"}</strong></td>
+                      <td><div className="score-input-wrap"><input type="number" min="0" max={maxScore} step="0.1" value={item.score} onChange={(e) => updateScore(item.sourceIndex, e.target.value)} placeholder="0" /><span>{maxScore === 100 ? "%" : `/ ${maxScore}`}</span></div></td>
+                      <td>{item.score !== "" ? <span className="pill pill-green">Entered</span> : <span className="pill pill-amber">Pending</span>}</td>
                     </tr>
-                  );
-                }
-              )
-            )}
-          </tbody>
-        </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            padding: "25px",
-            background: "#f8fafc",
-          }}
-        >
-          <button
-            onClick={saveScores}
-            disabled={saving}
-            style={{
-              background: "#2563eb",
-              color: "#fff",
-              border: "none",
-              borderRadius: "12px",
-              padding: "14px 28px",
-              fontSize: "16px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-            }}
-          >
-            <FaSave />
-
-            {saving
-              ? "Saving..."
-              : "Save Scores"}
-          </button>
-        </div>
+          <div className="score-sheet-footer">
+            <span>{entered} of {scores.length} students completed</span>
+            <button onClick={saveScores} disabled={saving}><FaSave /> {saving ? "Saving…" : "Save all scores"}</button>
+          </div>
+        </section>
       </div>
-
     </Layout>
   );
 }

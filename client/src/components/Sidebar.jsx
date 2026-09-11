@@ -1,13 +1,5 @@
-import {
-  NavLink,
-  useNavigate,
-} from "react-router-dom";
-
-import {
-  useContext,
-  useState,
-} from "react";
-
+import { NavLink, useNavigate } from "react-router-dom";
+import { useContext } from "react";
 import {
   FaHome,
   FaUsers,
@@ -19,20 +11,14 @@ import {
   FaBullhorn,
   FaUser,
   FaSignOutAlt,
-  FaChevronDown,
   FaTimes,
+  FaPlane,
 } from "react-icons/fa";
-
 import { AuthContext } from "../context/AuthContext";
 
 function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
-
-  const { user, logout } =
-    useContext(AuthContext);
-
-  const [assessmentOpen, setAssessmentOpen] =
-    useState(false);
+  const { user, logout } = useContext(AuthContext);
 
   const handleLogout = () => {
     logout();
@@ -40,243 +26,102 @@ function Sidebar({ isOpen, onClose }) {
     navigate("/login");
   };
 
-  const handleNavigation = () => {
-    // Close sidebar automatically on mobile
-    onClose?.();
-  };
+  const handleNavigation = () => onClose?.();
 
   return (
     <>
-      {/* Mobile overlay */}
-      {isOpen && (
-        <div
-          className="sidebar-overlay"
-          onClick={onClose}
-        />
-      )}
+      {isOpen && <div className="sidebar-overlay" onClick={onClose} />}
 
-      <aside
-        className={`sidebar ${
-          isOpen ? "sidebar-open" : ""
-        }`}
-      >
-        {/* Mobile close button */}
-        <button
-          type="button"
-          className="sidebar-close"
-          onClick={onClose}
-          aria-label="Close menu"
-        >
+      <aside className={`sidebar ${isOpen ? "sidebar-open" : ""}`}>
+        <button type="button" className="sidebar-close" onClick={onClose} aria-label="Close menu">
           <FaTimes />
         </button>
 
-        <div className="sidebar-logo">
-          AeroLearn
+        <div className="sidebar-brand">
+          <div className="sidebar-brand-mark"><FaPlane /></div>
+          <div className="sidebar-brand-copy">
+            <strong>AeroLearn</strong>
+            <span>Academic Cloud</span>
+          </div>
         </div>
 
         <nav className="sidebar-nav">
-
-          {/* ================= ADMIN ================= */}
+          {(user?.role === "Admin" || user?.role === "Instructor") && (
+            <>
+              <p className="sidebar-title">Workspace</p>
+              <NavLink to="/dashboard" onClick={handleNavigation}>
+                <FaHome /><span>Dashboard</span>
+              </NavLink>
+            </>
+          )}
 
           {user?.role === "Admin" && (
             <>
-              <p className="sidebar-title">
-                Administration
-              </p>
-
-              <NavLink
-                to="/users"
-                onClick={handleNavigation}
-              >
-                <FaUsers />
-                <span>Users</span>
+              <p className="sidebar-title">Administration</p>
+              <NavLink to="/users" onClick={handleNavigation}>
+                <FaUsers /><span>User Management</span>
               </NavLink>
-
-              <NavLink
-                to="/students"
-                onClick={handleNavigation}
-              >
-                <FaUserGraduate />
-                <span>Students</span>
+              <NavLink to="/students" onClick={handleNavigation}>
+                <FaUserGraduate /><span>Students</span>
               </NavLink>
             </>
           )}
 
-          {/* ============ ADMIN & INSTRUCTOR ============ */}
-
-          {(user?.role === "Admin" ||
-            user?.role === "Instructor") && (
+          {(user?.role === "Admin" || user?.role === "Instructor") && (
             <>
-              <NavLink
-                to="/dashboard"
-                onClick={handleNavigation}
-              >
-                <FaHome />
-                <span>Dashboard</span>
+              <p className="sidebar-title">Academic</p>
+              <NavLink to="/courses" onClick={handleNavigation}>
+                <FaBook /><span>Courses</span>
+              </NavLink>
+              <p className="sidebar-title sidebar-ops-title">Academic Operations</p>
+              <NavLink to="/attendance" onClick={handleNavigation}>
+                <FaClipboardCheck /><span>Attendance</span>
               </NavLink>
 
-              <p className="sidebar-title">
-                Academic
-              </p>
-
-              <NavLink
-                to="/courses"
-                onClick={handleNavigation}
-              >
-                <FaBook />
-                <span>Course Management</span>
+              <NavLink to="/assessment" onClick={handleNavigation}>
+                <FaClipboardList /><span>Assessment</span>
               </NavLink>
 
-              <NavLink
-                to="/attendance"
-                onClick={handleNavigation}
-              >
-                <FaClipboardCheck />
-                <span>Attendance</span>
+              <NavLink to="/learning-materials" onClick={handleNavigation}>
+                <FaFolderOpen /><span>Learning Materials</span>
               </NavLink>
-
-              {/* ================= Assessment ================= */}
-
-              <div className="assessment-menu">
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setAssessmentOpen(
-                      !assessmentOpen
-                    )
-                  }
-                  className="assessment-toggle"
-                >
-                  <span>
-                    <FaClipboardList />
-                    Assessment
-                  </span>
-
-                  <FaChevronDown
-                    className={
-                      assessmentOpen
-                        ? "assessment-arrow open"
-                        : "assessment-arrow"
-                    }
-                  />
-                </button>
-
-                {assessmentOpen && (
-                  <div className="assessment-submenu">
-
-                    <NavLink
-                      to="/assessment"
-                      onClick={handleNavigation}
-                    >
-                      Create Assessment
-                    </NavLink>
-
-                    <NavLink
-                      to="/assessment-submit"
-                      onClick={handleNavigation}
-                    >
-                      Submit Assessment
-                    </NavLink>
-
-                    <NavLink
-                      to="/assessment-results"
-                      onClick={handleNavigation}
-                    >
-                      View Results
-                    </NavLink>
-
-                  </div>
-                )}
-
-              </div>
-
-              <NavLink
-                to="/learning-materials"
-                onClick={handleNavigation}
-              >
-                <FaFolderOpen />
-                <span>
-                  Learning Materials
-                </span>
-              </NavLink>
-
-              <NavLink
-                to="/announcements"
-                onClick={handleNavigation}
-              >
-                <FaBullhorn />
-                <span>
-                  Announcements
-                </span>
+              <NavLink to="/announcements" onClick={handleNavigation}>
+                <FaBullhorn /><span>Announcements</span>
               </NavLink>
             </>
           )}
-
-          {/* ================= STUDENT ================= */}
 
           {user?.role === "Student" && (
             <>
-              <p className="sidebar-title">
-                Academic
-              </p>
-
-              <NavLink
-                to="/my-courses"
-                onClick={handleNavigation}
-              >
-                <FaBook />
-                <span>My Courses</span>
+              <p className="sidebar-title">My Learning</p>
+              <NavLink to="/my-courses" onClick={handleNavigation}>
+                <FaBook /><span>My Courses</span>
               </NavLink>
-
-              <NavLink
-                to="/my-results"
-                onClick={handleNavigation}
-              >
-                <FaClipboardCheck />
-                <span>My Results</span>
+              <NavLink to="/my-results" onClick={handleNavigation}>
+                <FaClipboardCheck /><span>My Results</span>
+              </NavLink>
+              <NavLink to="/learning-materials" onClick={handleNavigation}>
+                <FaFolderOpen /><span>Resources</span>
+              </NavLink>
+              <NavLink to="/announcements" onClick={handleNavigation}>
+                <FaBullhorn /><span>Announcements</span>
               </NavLink>
             </>
           )}
 
-          {/* ================= ACCOUNT ================= */}
-
-          <p className="sidebar-title">
-            Account
-          </p>
-
-          <NavLink
-            to="/profile"
-            onClick={handleNavigation}
-          >
-            <FaUser />
-            <span>Profile</span>
+          <p className="sidebar-title">Account</p>
+          <NavLink to="/profile" onClick={handleNavigation}>
+            <FaUser /><span>My Profile</span>
           </NavLink>
-
         </nav>
 
-        {/* ================= USER ================= */}
-
         <div className="sidebar-user">
-
-          <strong>
-            {user?.fullName}
-          </strong>
-
-          <small>
-            {user?.role}
-          </small>
-
-          <button
-            className="logout-btn"
-            onClick={handleLogout}
-          >
-            <FaSignOutAlt />
-            Logout
+          <strong>{user?.fullName || "AeroLearn User"}</strong>
+          <small>{user?.role || "Account"}</small>
+          <button className="logout-btn" onClick={handleLogout}>
+            <FaSignOutAlt /> Sign out
           </button>
-
         </div>
-
       </aside>
     </>
   );

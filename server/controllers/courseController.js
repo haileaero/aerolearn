@@ -98,15 +98,21 @@ export const getCourses = async (req, res) => {
 export const getCourseById = async (req, res) => {
   try {
 
-    const course = await Course.findById(req.params.id)
+    let courseQuery = Course.findById(req.params.id)
       .populate(
         "instructor",
         "fullName email"
-      )
-      .populate(
+      );
+
+    // Student-facing course details must not expose the class roster.
+    if (req.user?.role !== "Student") {
+      courseQuery = courseQuery.populate(
         "students",
         "studentId fullName"
       );
+    }
+
+    const course = await courseQuery;
 
     if (!course) {
       return res.status(404).json({

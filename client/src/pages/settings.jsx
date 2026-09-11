@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Layout from "../components/Layout";
+import { useUI } from "../context/UIContext";
 
 import {
   FaUniversity,
@@ -10,6 +11,7 @@ import {
 } from "react-icons/fa";
 
 function Settings() {
+  const { toast } = useUI();
   const [settings, setSettings] =
     useState({
       universityName:
@@ -49,10 +51,7 @@ function Settings() {
   };
 
   const saveSettings = () => {
-    alert(
-      "System settings saved successfully."
-    );
-
+    toast("System settings saved successfully.");
     // Later connect to backend
   };
 

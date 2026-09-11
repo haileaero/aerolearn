@@ -9,32 +9,24 @@ import {
   deleteUser,
 } from "../controllers/userController.js";
 
-import { protect } from "../middleware/authMiddleware.js";
+import {
+  protect,
+  authorize,
+} from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// ===========================
-// Get Users
-// ===========================
+router.use(protect);
 
-// Get all users
-router.post("/", protect, createUser);
-router.get("/", protect, getUsers);
+// User administration is restricted to Admin.
+router.post("/", authorize("Admin"), createUser);
+router.get("/", authorize("Admin"), getUsers);
+router.put("/:id", authorize("Admin"), updateUser);
+router.delete("/:id", authorize("Admin"), deleteUser);
 
-// Get all students
-router.get("/students", protect, getStudents);
-
-// Get all instructors
-router.get("/instructors", protect, getInstructors);
-
-// ===========================
-// Update User
-// ===========================
-router.put("/:id", protect, updateUser);
-
-// ===========================
-// Delete User
-// ===========================
-router.delete("/:id", protect, deleteUser);
+// Instructors are needed in course/assessment selectors; students are needed
+// in teaching workflows, so staff may read these limited directory endpoints.
+router.get("/students", authorize("Admin", "Instructor"), getStudents);
+router.get("/instructors", authorize("Admin", "Instructor"), getInstructors);
 
 export default router;

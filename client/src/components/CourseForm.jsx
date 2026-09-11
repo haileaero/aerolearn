@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import api from "../api";
+import { useUI } from "../context/UIContext";
 
 function CourseForm({
   onSave,
   editingCourse,
 }) {
+  const { toast } = useUI();
+  const [validationError, setValidationError] = useState("");
   const emptyCourse = {
     code: "",
     name: "",
@@ -58,10 +61,8 @@ function CourseForm({
 
       setInstructors(res.data);
 
-    } catch (error) {
-
-      console.log(error);
-
+    } catch {
+      toast("Unable to load instructors.", "error");
     }
   };
 
@@ -100,12 +101,11 @@ function CourseForm({
       !course.semester ||
       !course.instructor
     ) {
-      alert(
-        "Please complete all required fields."
-      );
+      setValidationError("Please complete all required course fields before saving.");
       return;
     }
 
+    setValidationError("");
     await onSave(course);
 
     if (!editingCourse) {
@@ -122,13 +122,15 @@ function CourseForm({
 
       <h2
         style={{
-          marginBottom: "25px",
+          marginBottom: "12px",
         }}
       >
         {editingCourse
           ? "Edit Course"
           : "Create Course"}
       </h2>
+
+      {validationError && <div className="al-form-error">{validationError}</div>}
 
       <input
         name="code"

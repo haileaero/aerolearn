@@ -1,487 +1,71 @@
 import { useMemo, useState } from "react";
+import { FaPen, FaTrash, FaSearch, FaUsers, FaUserCheck, FaGraduationCap, FaUserSlash } from "react-icons/fa";
 
-function StudentTable({
-  students,
-  removeStudent,
-  editStudent,
-}) {
-  const [search, setSearch] =
-    useState("");
+const departments = [
+  "Aerospace Engineering", "Production Engineering", "Armament Engineering",
+  "Computer Engineering", "Motor Vehicle Engineering", "Metallurgy and Materials Engineering",
+  "Chemical Engineering", "Electrical Power Engineering", "Electronics Engineering", "Civil Engineering"
+];
 
-  const [department, setDepartment] =
-    useState("");
+function StudentTable({ students, removeStudent, editStudent }) {
+  const [search, setSearch] = useState("");
+  const [department, setDepartment] = useState("");
 
   const filteredStudents = useMemo(() => {
-  const studentList = Array.isArray(students)
-    ? students
-    : [];
+    const studentList = Array.isArray(students) ? students : [];
+    const keyword = search.toLowerCase();
+    return studentList.filter((student) => {
+      const matchesSearch = [student.fullName, student.studentId, student.email, student.department]
+        .filter(Boolean).some((value) => value.toLowerCase().includes(keyword));
+      return matchesSearch && (!department || student.department === department);
+    });
+  }, [students, search, department]);
 
-  return studentList.filter((student) => {
-        const keyword =
-          search.toLowerCase();
-
-        const matchesSearch =
-          student.fullName
-            ?.toLowerCase()
-            .includes(keyword) ||
-          student.studentId
-            ?.toLowerCase()
-            .includes(keyword) ||
-          student.email
-            ?.toLowerCase()
-            .includes(keyword) ||
-          student.department
-            ?.toLowerCase()
-            .includes(keyword);
-
-        const matchesDepartment =
-          department === "" ||
-          student.department ===
-            department;
-
-        return (
-          matchesSearch &&
-          matchesDepartment
-        );
-      });
-    }, [
-      students,
-      search,
-      department,
-    ]);
-
-  const total =
-    filteredStudents.length;
-
-  const active =
-    filteredStudents.filter(
-      (s) => s.status === "Active"
-    ).length;
-
-  const graduated =
-    filteredStudents.filter(
-      (s) =>
-        s.status === "Graduated"
-    ).length;
-
-  const suspended =
-    filteredStudents.filter(
-      (s) =>
-        s.status === "Suspended"
-    ).length;
+  const active = filteredStudents.filter((s) => s.status === "Active").length;
+  const graduated = filteredStudents.filter((s) => s.status === "Graduated").length;
+  const suspended = filteredStudents.filter((s) => s.status === "Suspended").length;
 
   return (
-    <>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit,minmax(220px,1fr))",
-          gap: "20px",
-          marginBottom: "30px",
-        }}
-      >
-        <div
-          style={{
-            background: "#fff",
-            padding: "22px",
-            borderRadius: "14px",
-            textAlign: "center",
-            boxShadow:
-              "0 5px 15px rgba(0,0,0,.08)",
-          }}
-        >
-          <h4>Total Students</h4>
-          <h1>{total}</h1>
-        </div>
-
-        <div
-          style={{
-            background: "#dcfce7",
-            padding: "22px",
-            borderRadius: "14px",
-            textAlign: "center",
-          }}
-        >
-          <h4>Active</h4>
-          <h1>{active}</h1>
-        </div>
-
-        <div
-          style={{
-            background: "#dbeafe",
-            padding: "22px",
-            borderRadius: "14px",
-            textAlign: "center",
-          }}
-        >
-          <h4>Graduated</h4>
-          <h1>{graduated}</h1>
-        </div>
-
-        <div
-          style={{
-            background: "#fee2e2",
-            padding: "22px",
-            borderRadius: "14px",
-            textAlign: "center",
-          }}
-        >
-          <h4>Suspended</h4>
-          <h1>{suspended}</h1>
-        </div>
+    <section className="al-data-section">
+      <div className="al-mini-stats">
+        <div className="al-mini-stat stat-blue"><span><FaUsers /></span><div><b>{filteredStudents.length}</b><small>Total</small></div></div>
+        <div className="al-mini-stat stat-green"><span><FaUserCheck /></span><div><b>{active}</b><small>Active</small></div></div>
+        <div className="al-mini-stat stat-violet"><span><FaGraduationCap /></span><div><b>{graduated}</b><small>Graduated</small></div></div>
+        <div className="al-mini-stat stat-red"><span><FaUserSlash /></span><div><b>{suspended}</b><small>Suspended</small></div></div>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          gap: "15px",
-          flexWrap: "wrap",
-          marginBottom: "25px",
-        }}
-      >
-        <input
-          type="text"
-          placeholder="Search by ID, name, email or department..."
-          value={search}
-          onChange={(e) =>
-            setSearch(e.target.value)
-          }
-          style={{
-            flex: 2,
-            padding: "12px",
-            borderRadius: "10px",
-            border:
-              "1px solid #ddd",
-          }}
-        />
-
-        <select
-          value={department}
-          onChange={(e) =>
-            setDepartment(
-              e.target.value
-            )
-          }
-          style={{
-            flex: 1,
-            padding: "12px",
-            borderRadius: "10px",
-          }}
-        >
-          <option value="">
-            All Departments
-          </option>
-
-          <option>
-            Aerospace Engineering
-          </option>
-
-          <option>
-            Production Engineering
-          </option>
-
-          <option>
-            Armament Engineering
-          </option>
-
-          <option>
-            Computer Engineering
-          </option>
-
-          <option>
-            Motor Vehicle Engineering
-          </option>
-
-          <option>
-            Metallurgy and Materials Engineering
-          </option>
-
-          <option>
-            Chemical Engineering
-          </option>
-
-          <option>
-            Electrical Power Engineering
-          </option>
-
-          <option>
-            Electronics Engineering
-          </option>
-
-          <option>
-            Civil Engineering
-          </option>
+      <div className="al-toolbar">
+        <div className="al-searchbox"><FaSearch /><input type="text" placeholder="Search ID, name, email or department..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+        <select className="al-compact-select" value={department} onChange={(e) => setDepartment(e.target.value)}>
+          <option value="">All Departments</option>
+          {departments.map((item) => <option key={item}>{item}</option>)}
         </select>
       </div>
 
-      <div
-        style={{
-          overflowX: "auto",
-          background: "#fff",
-          borderRadius: "15px",
-          boxShadow:
-            "0 5px 15px rgba(0,0,0,.08)",
-        }}
-      >
-        <table
-          className="student-table"
-          style={{
-            width: "100%",
-            borderCollapse:
-              "collapse",
-          }}
-        >
-                    <thead>
-            <tr
-              style={{
-                background: "#2563eb",
-                color: "#fff",
-              }}
-            >
-              <th style={{ padding: "14px" }}>
-                Student ID
-              </th>
-
-              <th style={{ padding: "14px" }}>
-                Full Name
-              </th>
-
-              <th style={{ padding: "14px" }}>
-                Gender
-              </th>
-
-              <th style={{ padding: "14px" }}>
-                Email
-              </th>
-
-              <th style={{ padding: "14px" }}>
-                Phone
-              </th>
-
-              <th style={{ padding: "14px" }}>
-                Department
-              </th>
-
-              <th style={{ padding: "14px" }}>
-                Program
-              </th>
-
-              <th style={{ padding: "14px" }}>
-                Year
-              </th>
-
-              <th style={{ padding: "14px" }}>
-                Semester
-              </th>
-
-              <th style={{ padding: "14px" }}>
-                Section
-              </th>
-
-              <th style={{ padding: "14px" }}>
-                Status
-              </th>
-
-              <th style={{ padding: "14px" }}>
-                Actions
-              </th>
-            </tr>
-          </thead>
-
+      <div className="al-table-shell">
+        <table className="al-table al-table-blue al-wide-table">
+          <thead><tr>
+            <th>Student ID</th><th>Full Name</th><th>Gender</th><th>Email</th><th>Phone</th>
+            <th>Department</th><th>Program</th><th>Year</th><th>Semester</th><th>Section</th><th>Status</th><th>Actions</th>
+          </tr></thead>
           <tbody>
-            {filteredStudents.length ===
-            0 ? (
-              <tr>
-                <td
-                  colSpan="12"
-                  style={{
-                    padding: "30px",
-                    textAlign: "center",
-                    color: "#777",
-                  }}
-                >
-                  No students found.
-                </td>
-              </tr>
-            ) : (
-              filteredStudents.map(
-                (student) => (
-                  <tr
-                    key={student._id}
-                    style={{
-                      borderBottom:
-                        "1px solid #eee",
-                    }}
-                  >
-                    <td
-                      style={{
-                        padding: "14px",
-                      }}
-                    >
-                      {student.studentId}
-                    </td>
-
-                    <td
-                      style={{
-                        padding: "14px",
-                        fontWeight: "600",
-                      }}
-                    >
-                      {student.fullName}
-                    </td>
-
-                    <td
-                      style={{
-                        padding: "14px",
-                      }}
-                    >
-                      {student.gender}
-                    </td>
-
-                    <td
-                      style={{
-                        padding: "14px",
-                      }}
-                    >
-                      {student.email}
-                    </td>
-
-                    <td
-                      style={{
-                        padding: "14px",
-                      }}
-                    >
-                      {student.phone}
-                    </td>
-
-                    <td
-                      style={{
-                        padding: "14px",
-                      }}
-                    >
-                      {student.department}
-                    </td>
-
-                    <td
-                      style={{
-                        padding: "14px",
-                      }}
-                    >
-                      {student.program}
-                    </td>
-
-                    <td
-                      style={{
-                        padding: "14px",
-                      }}
-                    >
-                      {student.year}
-                    </td>
-
-                    <td
-                      style={{
-                        padding: "14px",
-                      }}
-                    >
-                      {student.semester}
-                    </td>
-
-                    <td
-                      style={{
-                        padding: "14px",
-                      }}
-                    >
-                      {student.section}
-                    </td>
-
-                    <td
-                      style={{
-                        padding: "14px",
-                      }}
-                    >
-                      <span
-                        style={{
-                          padding:
-                            "6px 14px",
-                          borderRadius:
-                            "20px",
-                          color: "#fff",
-                          fontWeight:
-                            "600",
-                          background:
-                            student.status ===
-                            "Active"
-                              ? "#16a34a"
-                              : student.status ===
-                                "Graduated"
-                              ? "#2563eb"
-                              : "#dc2626",
-                        }}
-                      >
-                        {student.status}
-                      </span>
-                    </td>
-
-                    <td
-                      style={{
-                        padding: "14px",
-                      }}
-                    >
-                                            <button
-                        onClick={() =>
-                          editStudent(student)
-                        }
-                        style={{
-                          background:
-                            "#2563eb",
-                          color: "#fff",
-                          border: "none",
-                          padding:
-                            "8px 14px",
-                          borderRadius:
-                            "8px",
-                          cursor: "pointer",
-                          marginRight:
-                            "10px",
-                          fontWeight:
-                            "600",
-                        }}
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          removeStudent(
-                            student._id
-                          )
-                        }
-                        style={{
-                          background:
-                            "#dc2626",
-                          color: "#fff",
-                          border: "none",
-                          padding:
-                            "8px 14px",
-                          borderRadius:
-                            "8px",
-                          cursor: "pointer",
-                          fontWeight:
-                            "600",
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                )
-              )
-            )}
+            {filteredStudents.length === 0 ? <tr><td colSpan="12" className="al-empty-cell">No students found.</td></tr> :
+              filteredStudents.map((student) => <tr key={student._id}>
+                <td><span className="al-id-chip">{student.studentId}</span></td>
+                <td className="al-strong-cell">{student.fullName}</td>
+                <td>{student.gender || "—"}</td><td>{student.email || "—"}</td><td>{student.phone || "—"}</td>
+                <td>{student.department || "—"}</td><td>{student.program || "—"}</td><td>{student.year || "—"}</td>
+                <td>{student.semester || "—"}</td><td>{student.section || "—"}</td>
+                <td><span className={`al-status ${student.status === "Active" ? "is-active" : student.status === "Graduated" ? "is-graduated" : "is-inactive"}`}>{student.status || "Unknown"}</span></td>
+                <td><div className="al-row-actions">
+                  <button className="al-icon-btn al-edit-btn" onClick={() => editStudent(student)} title="Edit student"><FaPen /></button>
+                  <button className="al-icon-btn al-delete-btn" onClick={() => removeStudent(student._id)} title="Delete student"><FaTrash /></button>
+                </div></td>
+              </tr>)}
           </tbody>
         </table>
       </div>
-    </>
+    </section>
   );
 }
 

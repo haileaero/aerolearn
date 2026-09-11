@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import api from "../api";
 
 function UserForm({ onSave, editingUser }) {
   const emptyUser = {
@@ -14,12 +13,7 @@ function UserForm({ onSave, editingUser }) {
   };
 
   const [user, setUser] = useState(emptyUser);
-  const [departments, setDepartments] = useState([]);
-
-  useEffect(() => {
-    loadDepartments();
-  }, []);
-
+  const [formError, setFormError] = useState("");
   useEffect(() => {
     if (editingUser) {
       setUser({
@@ -31,20 +25,6 @@ function UserForm({ onSave, editingUser }) {
       setUser(emptyUser);
     }
   }, [editingUser]);
-
-  const loadDepartments = async () => {
-    try {
-      const res = await api.get("/departments");
-
-      setDepartments(
-        Array.isArray(res.data)
-          ? res.data
-          : res.data.departments || []
-      );
-    } catch (err) {
-      console.error("Failed to load departments", err);
-    }
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -79,10 +59,11 @@ function UserForm({ onSave, editingUser }) {
       !user.email ||
       (!editingUser && !user.password)
     ) {
-      alert("Please fill all required fields.");
+      setFormError("Full name, email and password are required.");
       return;
     }
 
+    setFormError("");
     await onSave(user);
 
     if (!editingUser) {
@@ -91,29 +72,15 @@ function UserForm({ onSave, editingUser }) {
   };
 
   return (
-    <form
-      onSubmit={submit}
-      style={{
-        background: "#fff",
-        padding: "25px",
-        borderRadius: "12px",
-        marginBottom: "30px",
-      }}
-    >
+    <form onSubmit={submit} className="al-compact-form">
       <h2>
         {editingUser
           ? "Update User"
           : "Create User"}
       </h2>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit,minmax(250px,1fr))",
-          gap: "15px",
-        }}
-      >
+      <div className="al-form-grid">
+        {formError && <div className="al-form-error">{formError}</div>}
         <input
           name="fullName"
           placeholder="Full Name"
@@ -233,12 +200,7 @@ function UserForm({ onSave, editingUser }) {
         />
       </div>
 
-      <button
-        type="submit"
-        style={{
-          marginTop: "20px",
-        }}
-      >
+      <button type="submit" className="al-form-submit">
         {editingUser
           ? "Update User"
           : "Create User"}

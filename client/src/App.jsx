@@ -1,7 +1,12 @@
 import AppRoutes from "./routes/AppRoutes";
+import AppErrorBoundary from "./components/AppErrorBoundary";
 
 function App() {
-  return <AppRoutes />;
+  return (
+    <AppErrorBoundary>
+      <AppRoutes />
+    </AppErrorBoundary>
+  );
 }
 
 export default App;

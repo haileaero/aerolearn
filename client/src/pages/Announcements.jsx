@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { FaBullhorn, FaClock, FaPen, FaPlus, FaTimes, FaTrash, FaUsers } from "react-icons/fa";
 import Layout from "../components/Layout";
+import { useUI } from "../context/UIContext";
 
 import {
   getAnnouncements,
@@ -9,14 +11,16 @@ import {
 } from "../services/announcementService";
 
 function Announcements() {
+  const { confirm, toast } = useUI();
   const [announcements, setAnnouncements] =
     useState([]);
 
   const [search, setSearch] =
     useState("");
 
-  const [editingId, setEditingId] =
-    useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [showComposer, setShowComposer] = useState(false);
+  const [priorityFilter, setPriorityFilter] = useState("All");
 
   const [form, setForm] = useState({
     title: "",
@@ -69,6 +73,7 @@ function Announcements() {
     await loadAnnouncements();
 
     setEditingId(null);
+    setShowComposer(false);
 
     setForm({
       title: "",
@@ -83,9 +88,8 @@ function Announcements() {
   const editAnnouncement = (
     announcement
   ) => {
-    setEditingId(
-      announcement._id
-    );
+    setEditingId(announcement._id);
+    setShowComposer(true);
 
     setForm({
       title:
@@ -113,16 +117,26 @@ function Announcements() {
     });
   };
 
-  const removeAnnouncement =
-    async (id) => {
+  const removeAnnouncement = async (id) => {
+    const approved = await confirm({
+      title: "Delete this announcement?",
+      message: "This removes the announcement from the campus feed for all intended recipients.",
+      confirmText: "Delete announcement",
+    });
+    if (!approved) return;
+    try {
       await deleteAnnouncement(id);
-
       await loadAnnouncements();
-    };
+      toast("Announcement deleted.");
+    } catch {
+      toast("Unable to delete announcement.", "error");
+    }
+  };
 
   const filtered =
     useMemo(() => {
       return announcements
+        .filter((a) => priorityFilter === "All" || a.priority === priorityFilter)
         .filter((a) =>
           (
             a.title +
@@ -155,7 +169,7 @@ function Announcements() {
             new Date(a.createdAt)
           );
         });
-    }, [announcements, search]);
+    }, [announcements, search, priorityFilter]);
 
   const priorityColor = (
     priority
@@ -173,22 +187,13 @@ function Announcements() {
   };
     return (
     <Layout>
-      <div
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-        }}
-      >
-        <h1
-          className="page-title"
-          style={{
-            marginBottom: "25px",
-          }}
-        >
-          📢 Announcement Center
-        </h1>
+      <div className="al-control-page">
+        <header className="al-control-header">
+          <div><span className="al-eyebrow">CAMPUS COMMUNICATION</span><h1><FaBullhorn /> Announcement Center</h1><p>Publish, prioritize and manage academic updates.</p></div>
+          <div className="ops-header-actions"><span className="al-count-pill">{filtered.length} visible</span><button className={`al-primary-action ${showComposer ? "is-close" : ""}`} onClick={() => { setShowComposer((value) => !value); setEditingId(null); }}>{showComposer ? <><FaTimes /> Close</> : <><FaPlus /> Publish</>}</button></div>
+        </header>
 
-        <form
+        {showComposer && <form
           className="course-form"
           onSubmit={submitAnnouncement}
         >
@@ -201,7 +206,7 @@ function Announcements() {
           />
 
           <textarea
-            rows="5"
+            rows="3"
             name="message"
             placeholder="Write announcement..."
             value={form.message}
@@ -251,7 +256,9 @@ function Announcements() {
               ? "Update Announcement"
               : "Publish Announcement"}
           </button>
-        </form>
+        </form>}
+
+        <div className="announcement-filter-bar"><span>Priority</span>{["All","High","Normal","Low"].map((item) => <button key={item} className={priorityFilter === item ? "active" : ""} onClick={() => setPriorityFilter(item)}>{item}</button>)}</div>
 
         <input
           type="text"
@@ -262,9 +269,9 @@ function Announcements() {
           }
           style={{
             width: "100%",
-            padding: "14px",
+            padding: "10px 12px",
             borderRadius: "10px",
-            margin: "30px 0",
+            margin: "14px 0",
             border: "1px solid #ddd",
           }}
         />
@@ -273,8 +280,8 @@ function Announcements() {
           style={{
             display: "grid",
             gridTemplateColumns:
-              "repeat(auto-fill,minmax(340px,1fr))",
-            gap: "25px",
+              "repeat(auto-fill,minmax(300px,1fr))",
+            gap: "14px",
           }}
         >
           {filtered.length === 0 ? (
@@ -299,7 +306,7 @@ function Announcements() {
                   style={{
                     background: "#fff",
                     borderRadius: "14px",
-                    padding: "22px",
+                    padding: "15px",
                     boxShadow:
                       "0 8px 25px rgba(0,0,0,.08)",
                     borderLeft: `6px solid ${priorityColor(
@@ -381,10 +388,7 @@ function Announcements() {
                           "13px",
                       }}
                     >
-                      👥{" "}
-                      {
-                        announcement.audience
-                      }
+                      <FaUsers /> {announcement.audience}
                     </span>
 
                     {announcement.expiryDate && (
@@ -400,8 +404,7 @@ function Announcements() {
                             "13px",
                         }}
                       >
-                        ⏰{" "}
-                        {new Date(
+                        <FaClock /> {new Date(
                           announcement.expiryDate
                         ).toLocaleDateString()}
                       </span>
@@ -442,8 +445,9 @@ function Announcements() {
                             announcement
                           )
                         }
+                        className="al-row-text-btn edit"
                       >
-                        ✏️ Edit
+                        <FaPen /> Edit
                       </button>
 
                       <button
@@ -452,8 +456,9 @@ function Announcements() {
                             announcement._id
                           )
                         }
+                        className="al-row-text-btn delete"
                       >
-                        🗑 Delete
+                        <FaTrash /> Delete
                       </button>
                     </div>
                   </div>

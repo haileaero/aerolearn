@@ -1,204 +1,69 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { FaSearch, FaExternalLinkAlt, FaPen, FaTrash } from "react-icons/fa";
 
-function CourseTable({
-  courses,
-  editCourse,
-  removeCourse,
-}) {
+function CourseTable({ courses, editCourse, removeCourse }) {
   const navigate = useNavigate();
+  const [search, setSearch] = useState("");
 
-  const [search, setSearch] =
-    useState("");
-
-  const courseList = Array.isArray(courses)
-  ? courses
-  : [];
-
-const filteredCourses = courseList.filter((course) => {
-      const keyword =
-        search.toLowerCase();
-
-      return (
-        (course.code || "")
-          .toLowerCase()
-          .includes(keyword) ||
-
-        (course.name || "")
-          .toLowerCase()
-          .includes(keyword) ||
-
-        (course.department || "")
-          .toLowerCase()
-          .includes(keyword) ||
-
-        (course.program || "")
-          .toLowerCase()
-          .includes(keyword) ||
-
-        (course.year || "")
-          .toLowerCase()
-          .includes(keyword) ||
-
-        (course.semester || "")
-          .toLowerCase()
-          .includes(keyword)
-      );
-    });
+  const filteredCourses = useMemo(() => {
+    const keyword = search.toLowerCase();
+    return (Array.isArray(courses) ? courses : []).filter((course) =>
+      [course.code, course.name, course.department, course.program, course.year, course.semester]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(keyword))
+    );
+  }, [courses, search]);
 
   return (
-    <>
-      <input
-        type="text"
-        placeholder="Search Courses..."
-        value={search}
-        onChange={(e) =>
-          setSearch(e.target.value)
-        }
-        style={{
-          width: "100%",
-          padding: "12px",
-          marginBottom: "25px",
-          borderRadius: "8px",
-        }}
-      />
+    <section className="al-data-section">
+      <div className="al-toolbar">
+        <div className="al-searchbox">
+          <FaSearch />
+          <input
+            type="text"
+            placeholder="Search code, course, department, program, year..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="al-count-pill">{filteredCourses.length} courses</div>
+      </div>
 
-      <table
-        className="course-table"
-      >
-        <thead>
-          <tr>
-            <th>Code</th>
-
-            <th>Course</th>
-
-            <th>Department</th>
-
-            <th>Program</th>
-
-            <th>Year</th>
-
-            <th>Semester</th>
-
-            <th>Instructor</th>
-
-            <th>Status</th>
-
-            <th>Action</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {filteredCourses.length ===
-          0 ? (
+      <div className="al-table-shell">
+        <table className="al-table al-table-blue">
+          <thead>
             <tr>
-              <td
-                colSpan="9"
-                style={{
-                  textAlign:
-                    "center",
-                }}
-              >
-                No Courses Found
-              </td>
+              <th>Code</th><th>Course</th><th>Department</th><th>Program</th>
+              <th>Year</th><th>Semester</th><th>Instructor</th><th>Status</th><th>Action</th>
             </tr>
-          ) : (
-            filteredCourses.map(
-              (course) => (
-                <tr
-                  key={course._id}
-                >
-                  <td>
-                    {course.code}
-                  </td>
-
-                  <td>
-                    {course.name}
-                  </td>
-
-                  <td>
-                    {
-                      course.department
-                    }
-                  </td>
-
-                  <td>
-                    {course.program}
-                  </td>
-
-                  <td>
-                    {course.year}
-                  </td>
-
-                  <td>
-                    {
-                      course.semester
-                    }
-                  </td>
-
-                  <td>
-                    {typeof course.instructor ===
-                    "object"
-                      ? course
-                          .instructor
-                          ?.fullName
-                      : course.instructor}
-                  </td>
-
-                  <td>
-                    {course.status}
-                  </td>
-
-                  <td
-                    style={{
-                      display:
-                        "flex",
-                      gap: "6px",
-                    }}
-                  >
-                    <button
-                      onClick={() =>
-                        navigate(
-                          `/course/${course._id}`
-                        )
-                      }
-                    >
-                      Open
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        editCourse(
-                          course
-                        )
-                      }
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      style={{
-                        background:
-                          "#dc3545",
-                        color:
-                          "white",
-                      }}
-                      onClick={() =>
-                        removeCourse(
-                          course._id
-                        )
-                      }
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              )
-            )
-          )}
-        </tbody>
-      </table>
-    </>
+          </thead>
+          <tbody>
+            {filteredCourses.length === 0 ? (
+              <tr><td colSpan="9" className="al-empty-cell">No courses found.</td></tr>
+            ) : filteredCourses.map((course) => (
+              <tr key={course._id}>
+                <td><span className="al-id-chip">{course.code}</span></td>
+                <td className="al-strong-cell">{course.name}</td>
+                <td>{course.department || "—"}</td>
+                <td>{course.program || "—"}</td>
+                <td>{course.year || "—"}</td>
+                <td>{course.semester || "—"}</td>
+                <td>{typeof course.instructor === "object" ? course.instructor?.fullName : course.instructor || "—"}</td>
+                <td><span className={`al-status ${String(course.status).toLowerCase() === "active" ? "is-active" : "is-inactive"}`}>{course.status || "Unknown"}</span></td>
+                <td>
+                  <div className="al-row-actions">
+                    <button className="al-icon-btn al-open-btn" onClick={() => navigate(`/course/${course._id}`)} title="Open course"><FaExternalLinkAlt /></button>
+                    <button className="al-icon-btn al-edit-btn" onClick={() => editCourse(course)} title="Edit course"><FaPen /></button>
+                    <button className="al-icon-btn al-delete-btn" onClick={() => removeCourse(course._id)} title="Delete course"><FaTrash /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 

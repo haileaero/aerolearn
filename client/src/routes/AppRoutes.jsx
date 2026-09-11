@@ -12,8 +12,6 @@ import MyCourses from "../pages/MyCourses";
 import MyResults from "../pages/MyResults";
 import Attendance from "../pages/Attendance";
 import Assessment from "../pages/Assessment";
-import SubmitAssessment from "../pages/SubmitAssessment";
-import ViewResults from "../pages/ViewResults";
 import LearningMaterials from "../pages/LearningMaterials";
 import CourseDetails from "../pages/CourseDetails";
 import Announcements from "../pages/Announcements";
@@ -132,35 +130,31 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/assessment/:id/scores"
+        element={
+          <ProtectedRoute roles={["Admin", "Instructor"]}>
+            <Assessment />
+          </ProtectedRoute>
+        }
+      />
 
       {/* ================= SUBMIT ASSESSMENT ================= */}
-
       <Route
         path="/assessment-submit"
         element={
-          <ProtectedRoute
-            roles={[
-              "Admin",
-              "Instructor",
-            ]}
-          >
-            <SubmitAssessment />
+          <ProtectedRoute roles={["Admin", "Instructor"]}>
+            <Assessment />
           </ProtectedRoute>
         }
       />
 
       {/* ================= VIEW RESULTS ================= */}
-
       <Route
         path="/assessment-results"
         element={
-          <ProtectedRoute
-            roles={[
-              "Admin",
-              "Instructor",
-            ]}
-          >
-            <ViewResults />
+          <ProtectedRoute roles={["Admin", "Instructor"]}>
+            <Assessment />
           </ProtectedRoute>
         }
       />

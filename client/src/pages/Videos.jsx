@@ -1,8 +1,7 @@
-import { useState } from "react";
 import Layout from "../components/Layout";
 
 function Videos() {
-  const [videos, setVideos] = useState([
+  const videos = [
     {
       id: 1,
       title: "Introduction to React",
@@ -18,7 +17,7 @@ function Videos() {
       title: "MongoDB Tutorial",
       url: "https://www.youtube.com/embed/ofme2o29ngU",
     },
-  ]);
+  ];
 
   return (
     <Layout>

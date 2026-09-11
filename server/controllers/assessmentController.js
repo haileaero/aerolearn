@@ -186,6 +186,8 @@ export const createAssessment =
 
             score: 0,
 
+            entered: false,
+
             remark: "",
 
           })
@@ -392,9 +394,13 @@ export const updateScores =
 
       }
 
-      assessment.scores =
-        req.body.scores;
-              await assessment.save();
+      assessment.scores = req.body.scores.map((item) => ({
+        student: item.student,
+        score: item.entered === false ? 0 : Number(item.score) || 0,
+        entered: item.entered !== false,
+        remark: item.remark || "",
+      }));
+      await assessment.save();
 
       const updatedAssessment =
         await Assessment.findById(

@@ -148,33 +148,6 @@ function CourseDetails() {
 
       }
       // =================================================
-      // ANNOUNCEMENTS
-      // =================================================
-      //
-      // IMPORTANT:
-      // This endpoint must return announcements
-      // belonging to this specific course.
-      //
-      // GET /api/announcements/course/:courseId
-      //
-      // =================================================
-
-      try {
-
-      
-
-      } catch (error) {
-
-        console.error(
-          "Failed to load course announcements:",
-          error
-        );
-
-        setAnnouncements([]);
-
-      }
-
-      // =================================================
       // ASSESSMENTS
       // =================================================
 
@@ -343,13 +316,7 @@ function CourseDetails() {
           COURSE HEADER
       ================================================= */}
 
-      {user?.role !== "Student" && (
-
-        <CourseHeader
-          course={course}
-        />
-
-      )}
+      <CourseHeader course={course} />
       {/* =================================================
           COURSE NAVIGATION
       ================================================= */}

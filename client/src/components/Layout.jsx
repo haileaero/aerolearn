@@ -21,6 +21,8 @@ function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] =
     useState(false);
 
+  const showBack = location.pathname.startsWith("/course/") || location.pathname.startsWith("/assessment/");
+
   return (
     <div className="layout">
 
@@ -53,22 +55,11 @@ function Layout({ children }) {
 
         <main className="page-content">
 
-          {location.pathname !== "/" && (
+          {showBack && (
             <button
+              type="button"
               onClick={() => navigate(-1)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "20px",
-                background: "#2563eb",
-                color: "#fff",
-                border: "none",
-                borderRadius: "8px",
-                padding: "10px 18px",
-                cursor: "pointer",
-                fontWeight: "600",
-              }}
+              className="page-back-button"
             >
               <FaArrowLeft />
               Back

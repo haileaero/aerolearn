@@ -16,6 +16,7 @@ import attendanceRoutes from "./routes/attendanceRoutes.js";
 import assessmentRoutes from "./routes/assessmentRoutes.js";
 import learningMaterialRoutes from "./routes/learningMaterialRoutes.js";
 import announcementRoutes from "./routes/announcementRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
 
 import {
   notFound,
@@ -44,10 +45,12 @@ app.use(helmet());
 
 app.use(
   cors({
-  origin: [
-    "http://localhost:5173",
-    "https://aerolearn-client.onrender.com",
-  ],
+    origin: (process.env.CLIENT_ORIGINS ||
+      "http://localhost:5173,https://aerolearn-client.onrender.com")
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+    credentials: true,
   })
 );
 
@@ -171,6 +174,11 @@ app.use(
 app.use(
   "/api/announcements",
   announcementRoutes
+);
+
+app.use(
+  "/api/uploads",
+  uploadRoutes
 );
 
 

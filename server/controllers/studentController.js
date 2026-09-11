@@ -131,6 +131,15 @@ export const getStudentById = async (req, res) => {
 
 export const getStudentProfile = async (req, res) => {
   try {
+    if (
+      req.user?.role === "Student" &&
+      req.user?.studentId !== req.params.studentId
+    ) {
+      return res.status(403).json({
+        message: "You can only access your own student profile.",
+      });
+    }
+
     const student = await Student.findOne({
   studentId: req.params.studentId,
 })

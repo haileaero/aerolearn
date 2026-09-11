@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 
 import { AuthContext } from "../context/AuthContext";
+import { useUI } from "../context/UIContext";
 
 import {
   FaBook,
@@ -18,6 +19,11 @@ import {
   FaFileAlt,
   FaSearch,
   FaUpload,
+  FaPlus,
+  FaTimes,
+  FaPen,
+  FaTrash,
+  FaExternalLinkAlt,
 } from "react-icons/fa";
 
 import { getCourses } from "../services/courseService";
@@ -45,6 +51,7 @@ function getYoutubeEmbed(url) {
 function LearningMaterials() {
 
   const navigate = useNavigate();
+  const { confirm, toast } = useUI();
 
   const { user } = useContext(AuthContext);
 
@@ -59,8 +66,9 @@ function LearningMaterials() {
   const [editingId, setEditingId] =
     useState(null);
 
-  const [search, setSearch] =
-    useState("");
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [showUpload, setShowUpload] = useState(false);
 
   const [form, setForm] = useState({
     title: "",
@@ -144,6 +152,7 @@ function LearningMaterials() {
     await loadData();
 
     setEditingId(null);
+    setShowUpload(false);
 
     setForm({
       title: "",
@@ -157,14 +166,15 @@ function LearningMaterials() {
 
   function edit(material) {
     setEditingId(material._id);
+    setShowUpload(true);
 
     setForm({
       title: material.title,
 
       course:
-        typeof material.course === "object"
+        material.course && typeof material.course === "object"
           ? material.course._id
-          : material.course,
+          : material.course || "",
 
       category: material.category,
 
@@ -185,19 +195,31 @@ function LearningMaterials() {
   }
 
   async function remove(id) {
-    await deleteLearningMaterial(id);
-    await loadData();
+    const approved = await confirm({
+      title: "Delete this learning material?",
+      message: "Students will no longer see this resource in the learning library.",
+      confirmText: "Delete material",
+    });
+    if (!approved) return;
+    try {
+      await deleteLearningMaterial(id);
+      await loadData();
+      toast("Learning material deleted.");
+    } catch {
+      toast("Unable to delete learning material.", "error");
+    }
   }
 
   const filtered = useMemo(() => {
     return materials.filter((material) => {
+      if (categoryFilter !== "All" && material.category !== categoryFilter) return false;
       return (
         (material.title || "")
           .toLowerCase()
           .includes(search.toLowerCase()) ||
 
         (
-          typeof material.course ===
+          material.course && typeof material.course ===
           "object"
             ? `${material.course.code || ""} ${material.course.name || ""}`
             : material.course || ""
@@ -210,129 +232,33 @@ function LearningMaterials() {
           .includes(search.toLowerCase())
       );
     });
-  }, [materials, search]);
+  }, [materials, search, categoryFilter]);
 
   return (
     <Layout>
-
-      <div
-        style={{
-          background:
-            "linear-gradient(135deg,#2563eb,#3b82f6)",
-          color: "#fff",
-          borderRadius: "22px",
-          padding: "35px",
-          marginBottom: "35px",
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "42px",
-            marginBottom: "10px",
-          }}
-        >
-          Learning Materials
-        </h1>
-
-        <p
-          style={{
-            opacity: 0.95,
-            fontSize: "16px",
-          }}
-        >
-          Upload, organize and manage lecture
-          notes, assignments, videos and
-          learning resources.
-        </p>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit,minmax(220px,1fr))",
-          gap: "20px",
-          marginBottom: "35px",
-        }}
-      >
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: "18px",
-            padding: "25px",
-            boxShadow:
-              "0 8px 20px rgba(15,23,42,.06)",
-          }}
-        >
-          <FaBook size={34} color="#2563eb" />
-          <h3>Total Materials</h3>
-          <h1>{materials.length}</h1>
+      <div className="al-control-page">
+        <header className="al-control-header al-library-head">
+          <div>
+            <span className="al-eyebrow">KNOWLEDGE LIBRARY</span>
+            <h1>Learning Materials</h1>
+            <p>Organize lecture notes, assignments, videos and course resources.</p>
+          </div>
+          {canManageMaterials && <button className={`al-primary-action ${showUpload ? "is-close" : ""}`} onClick={() => { setShowUpload((value) => !value); setEditingId(null); }}>{showUpload ? <><FaTimes /> Close</> : <><FaPlus /> Add material</>}</button>}
+        </header>
+        <nav className="ops-flow resource-flow" aria-label="Academic operations"><span><b>1</b> Attendance</span><span><b>2</b> Assessment</span><span><b>3</b> Scores</span><span><b>4</b> Results</span><span className="active"><b>5</b> Resources</span></nav>
+        <div className="al-kpi-ribbon">
+          <div><span className="blue"><FaBook /></span><b>{materials.length}</b><small>Materials</small></div>
+          <div><span className="red"><FaVideo /></span><b>{materials.filter((m) => m.category === "Video").length}</b><small>Videos</small></div>
+          <div><span className="green"><FaFilePdf /></span><b>{materials.filter((m) => m.category !== "Video").length}</b><small>Documents</small></div>
+          <div><span className="orange"><FaFileAlt /></span><b>{courses.length}</b><small>Courses</small></div>
         </div>
-
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: "18px",
-            padding: "25px",
-            boxShadow:
-              "0 8px 20px rgba(15,23,42,.06)",
-          }}
-        >
-          <FaVideo size={34} color="#dc2626" />
-          <h3>Videos</h3>
-          <h1>
-            {
-              materials.filter(
-                (m) =>
-                  m.category === "Video"
-              ).length
-            }
-          </h1>
-        </div>
-
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: "18px",
-            padding: "25px",
-            boxShadow:
-              "0 8px 20px rgba(15,23,42,.06)",
-          }}
-        >
-          <FaFilePdf size={34} color="#16a34a" />
-          <h3>Documents</h3>
-          <h1>
-            {
-              materials.filter(
-                (m) =>
-                  m.category !== "Video"
-              ).length
-            }
-          </h1>
-        </div>
-
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: "18px",
-            padding: "25px",
-            boxShadow:
-              "0 8px 20px rgba(15,23,42,.06)",
-          }}
-        >
-          <FaFileAlt size={34} color="#f59e0b" />
-          <h3>Courses</h3>
-          <h1>{courses.length}</h1>
-        </div>
-      </div>
-
-      {canManageMaterials && (
+      {canManageMaterials && showUpload && (
               <div
         style={{
           background: "#fff",
           borderRadius: "20px",
-          padding: "30px",
-          marginBottom: "35px",
+          padding: "18px",
+          marginBottom: "18px",
           boxShadow:
             "0 10px 25px rgba(15,23,42,.06)",
         }}
@@ -471,6 +397,11 @@ function LearningMaterials() {
 
       )}
 
+      <div className="resource-filter-bar">
+        <span>Filter</span>
+        {["All","Lecture Note","Assignment","Exercise","Slides","Video","Other"].map((category) => <button key={category} className={categoryFilter === category ? "active" : ""} onClick={() => setCategoryFilter(category)}>{category}</button>)}
+      </div>
+
       <div
         style={{
           position: "relative",
@@ -507,8 +438,8 @@ function LearningMaterials() {
         style={{
           display: "grid",
           gridTemplateColumns:
-            "repeat(auto-fit,minmax(360px,1fr))",
-          gap: "25px",
+            "repeat(auto-fit,minmax(300px,1fr))",
+          gap: "14px",
         }}
       >
         {filtered.map((material) => (
@@ -517,7 +448,7 @@ function LearningMaterials() {
             onClick={() =>
               navigate(
                 `/course/${
-                  typeof material.course ===
+                  material.course && typeof material.course ===
                   "object"
                     ? material.course._id
                     : material.course
@@ -527,7 +458,7 @@ function LearningMaterials() {
             style={{
               background: "#fff",
               borderRadius: "20px",
-              padding: "25px",
+              padding: "16px",
               boxShadow:
                 "0 10px 25px rgba(15,23,42,.06)",
               cursor: "pointer",
@@ -562,10 +493,10 @@ function LearningMaterials() {
 
             <p>
               <strong>Course:</strong>{" "}
-              {typeof material.course ===
+              {material.course && typeof material.course ===
               "object"
-                ? `${material.course.code} - ${material.course.name}`
-                : material.course}
+                ? `${material.course.code || "Course"} - ${material.course.name || "Unavailable"}`
+                : material.course || "Course unavailable"}
             </p>
 
             <p>{material.description}</p>
@@ -600,8 +531,8 @@ function LearningMaterials() {
   onClick={(e) =>
     e.stopPropagation()
   }
->
-  📄 Open File
+ className="material-open-link">
+  <FaExternalLinkAlt /> Open file
 </a>
               )}
 
@@ -636,16 +567,13 @@ function LearningMaterials() {
                     e.stopPropagation();
                     edit(material);
                   }}
+                  className="al-row-text-btn edit"
                 >
-                  Edit
+                  <FaPen /> Edit
                 </button>
 
                 <button
-                  style={{
-                    background:
-                      "#dc2626",
-                    color: "#fff",
-                  }}
+                  className="al-row-text-btn delete"
                   onClick={async (
                     e
                   ) => {
@@ -655,7 +583,7 @@ function LearningMaterials() {
                     );
                   }}
                 >
-                  Delete
+                  <FaTrash /> Delete
                 </button>
               </div>
             )}
@@ -664,6 +592,7 @@ function LearningMaterials() {
         ))}
       </div>
 
+      </div>
     </Layout>
   );
 }

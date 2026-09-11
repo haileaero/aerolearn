@@ -1,165 +1,90 @@
 import { useContext, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
+import StudentCourses from "../components/StudentCourses";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api";
+import { FaBook, FaGraduationCap, FaLayerGroup, FaPlane } from "react-icons/fa";
 
 function MyCourses() {
   const { user } = useContext(AuthContext);
-
   const [courses, setCourses] = useState([]);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
-    loadMyCourses();
-  }, []);
+    const loadMyCourses = async () => {
+      try {
+        const profileRes = await api.get(`/students/profile/${user.studentId}`);
+        const student = profileRes.data;
+        setProfile(student);
 
-  const loadMyCourses = async () => {
-  try {
-    const profileRes = await api.get(
-      `/students/profile/${user.studentId}`
-    );
+        const enrolledCourses = Array.isArray(student.courses) ? student.courses : [];
+        const fullCourses = await Promise.all(
+          enrolledCourses.map(async (course) => {
+            if (course && typeof course === "object" && course.name) return course;
+            if (!course) return null;
+            try {
+              const response = await api.get(`/courses/${course}`);
+              return response.data;
+            } catch {
+              return null;
+            }
+          })
+        );
+        setCourses(fullCourses.filter(Boolean));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    const profile = profileRes.data;
-
-    const enrolledCourses = Array.isArray(profile.courses)
-      ? profile.courses
-      : [];
-
-    const fullCourses = await Promise.all(
-      enrolledCourses.map(async (course) => {
-        if (typeof course === "object" && course.name) {
-          return course;
-        }
-
-        const res = await api.get(`/courses/${course}`);
-        return res.data;
-      })
-    );
-
-    setCourses(fullCourses);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoading(false);
-  }
-};
+    if (user?.studentId) loadMyCourses();
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, [user]);
 
   return (
     <Layout>
-      <div
-        style={{
-          background:
-            "linear-gradient(135deg,#1e40af,#2563eb,#3b82f6)",
-          color: "#fff",
-          padding: "40px",
-          borderRadius: "20px",
-          marginBottom: "30px",
-        }}
-      >
-        <h1>My Courses</h1>
-
-        <p>
-          View all courses you are currently enrolled in.
-        </p>
-      </div>
-
-      {loading ? (
-        <h2>Loading...</h2>
-      ) : courses.length === 0 ? (
-        <div
-          style={{
-            background: "#fff",
-            padding: "50px",
-            borderRadius: "18px",
-            textAlign: "center",
-          }}
-        >
-          <h2>No enrolled courses.</h2>
-        </div>
-      ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit,minmax(340px,1fr))",
-            gap: "25px",
-          }}
-        >
-          {courses.map((course) => (
-            <div
-              key={course._id}
-              style={{
-                background: "#fff",
-                borderRadius: "20px",
-                overflow: "hidden",
-                border: "1px solid #e5e7eb",
-                boxShadow:
-                  "0 10px 25px rgba(0,0,0,.08)",
-              }}
-            >
-              <img
-                src={
-                  course.thumbnail ||
-                  "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200"
-                }
-                alt={course.name}
-                style={{
-                  width: "100%",
-                  height: "220px",
-                  objectFit: "cover",
-                }}
-              />
-
-              <div style={{ padding: "24px" }}>
-                <h2>{course.name}</h2>
-
-                <p>
-                  <strong>Course Code:</strong>{" "}
-                  {course.code}
-                </p>
-
-                <p>
-                  <strong>Department:</strong>{" "}
-                  {course.department}
-                </p>
-
-                <p>
-                  <strong>Instructor:</strong>{" "}
-                  {course.instructor?.fullName || "-"}
-                </p>
-
-                <p>
-                  <strong>Semester:</strong>{" "}
-                  {course.semester}
-                </p>
-
-                <p>
-                  <strong>Study Year:</strong>{" "}
-                  {course.studyYear}
-                </p>
-
-                <Link
-                  to={`/course/${course._id}`}
-                  style={{
-                    display: "block",
-                    marginTop: "20px",
-                    textAlign: "center",
-                    background: "#2563eb",
-                    color: "#fff",
-                    textDecoration: "none",
-                    padding: "12px",
-                    borderRadius: "10px",
-                    fontWeight: "600",
-                  }}
-                >
-                  View Course
-                </Link>
-              </div>
+      <div className="dashboard-page">
+        <section className="dashboard-hero">
+          <div>
+            <span className="dashboard-kicker"><FaPlane /> Student learning space</span>
+            <h1>Ready to continue, {user?.fullName?.split(" ")[0] || "student"}?</h1>
+            <p>
+              Pick up where you left off, open your course workspaces and keep your academic progress organized from one personalized learning hub.
+            </p>
+            <div className="dashboard-meta">
+              {profile?.department && <span>{profile.department}</span>}
+              {profile?.year && <span>{profile.year}</span>}
+              {profile?.semester && <span>{profile.semester}</span>}
             </div>
-          ))}
+          </div>
+          <div className="dashboard-clock">
+            <span className="dashboard-clock-label">Your local study time</span>
+            <div className="dashboard-clock-time">{currentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+            <div className="dashboard-clock-date">{currentTime.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
+          </div>
+        </section>
+
+        <div className="dashboard-stats">
+          <article className="dashboard-stat stat-blue">
+            <div className="dashboard-stat-icon"><FaBook /></div>
+            <div className="dashboard-stat-copy"><span className="dashboard-stat-value">{courses.length}</span><span className="dashboard-stat-label">My courses</span><span className="dashboard-stat-trend">Current enrollment</span></div>
+          </article>
+          <article className="dashboard-stat stat-violet">
+            <div className="dashboard-stat-icon"><FaGraduationCap /></div>
+            <div className="dashboard-stat-copy"><span className="dashboard-stat-value">{profile?.year || "—"}</span><span className="dashboard-stat-label">Study level</span><span className="dashboard-stat-trend">Academic progression</span></div>
+          </article>
+          <article className="dashboard-stat stat-green">
+            <div className="dashboard-stat-icon"><FaLayerGroup /></div>
+            <div className="dashboard-stat-copy"><span className="dashboard-stat-value">{profile?.semester || "—"}</span><span className="dashboard-stat-label">Semester</span><span className="dashboard-stat-trend">Current academic period</span></div>
+          </article>
         </div>
-      )}
+
+        {loading ? <div className="dashboard-loading">Loading your courses…</div> : <StudentCourses courses={courses} />}
+      </div>
     </Layout>
   );
 }

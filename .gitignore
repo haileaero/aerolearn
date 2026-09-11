@@ -1,35 +1,31 @@
 # Dependencies
 node_modules/
+client/node_modules/
+server/node_modules/
 
-# Environment variables / secrets
-.env
-.env.local
-.env.*.local
-
-# Build output
+# Builds
+client/dist/
 dist/
-build/
 
-# Vite
-.vite/
+# Environment secrets
+.env
+.env.*
+!.env.example
+!client/.env.example
+!server/.env.example
+
+# Runtime uploads
+server/uploads/
+uploads/
 
 # Logs
 *.log
 npm-debug.log*
 yarn-debug.log*
-pnpm-debug.log*
+yarn-error.log*
 
-# OS files
+# OS/editor
 .DS_Store
 Thumbs.db
-
-# IDE
 .vscode/
 .idea/
-
-# Temporary files
-*.tmp
-*.temp
-
-# Server uploads
-server/uploads/

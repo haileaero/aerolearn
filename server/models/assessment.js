@@ -18,6 +18,11 @@ const scoreSchema = new mongoose.Schema(
       min: 0,
     },
 
+    entered: {
+      type: Boolean,
+      default: false,
+    },
+
     remark: {
       type: String,
       trim: true,
@@ -137,26 +142,20 @@ assessmentSchema.virtual(
   "averageScore"
 ).get(function () {
 
-  if (!this.scores.length) {
-
-    return 0;
-
-  }
-
-  const total =
-    this.scores.reduce(
-      (sum, item) =>
-        sum + item.score,
-      0
-    );
-
-  return Number(
-    (
-      total /
-      this.scores.length
-    ).toFixed(2)
+  const enteredScores = this.scores.filter(
+    (item) => item.entered === true || Number(item.score) > 0
   );
 
+  if (!enteredScores.length) {
+    return 0;
+  }
+
+  const total = enteredScores.reduce(
+    (sum, item) => sum + Number(item.score || 0),
+    0
+  );
+
+  return Number((total / enteredScores.length).toFixed(2));
 });
 
 /* ============================================================

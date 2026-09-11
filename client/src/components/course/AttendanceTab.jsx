@@ -1,87 +1,9 @@
+import { FaCalendarCheck, FaCheckCircle, FaClock, FaTimesCircle } from "react-icons/fa";
 import "./course.css";
-
-function AttendanceTab({ attendance, user }) {
-  if (attendance.length === 0) {
-    return (
-      <div className="empty-state">
-        <h2>📅 No Attendance Records</h2>
-        <p>No attendance has been recorded for this course yet.</p>
-      </div>
-    );
-  }
-
-  const getStudentStatus = (record) => {
-    const studentRecord = record.students?.find(
-      (item) => {
-        const student = item.student;
-
-        if (!student) return false;
-
-        const studentId =
-          typeof student === "object"
-            ? student.studentId
-            : student;
-
-        return (
-          String(studentId) ===
-          String(user?.studentId)
-        );
-      }
-    );
-
-    return studentRecord?.status || "-";
-  };
-
-  return (
-    <div className="attendance-card">
-
-      <table className="attendance-table">
-
-        <thead>
-          <tr>
-            <th>Week</th>
-            <th>Period</th>
-            <th>Date</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-
-        <tbody>
-
-          {attendance.map((record) => (
-
-            <tr key={record._id}>
-
-              <td>
-                {record.week}
-              </td>
-
-              <td>
-                {record.period}
-              </td>
-
-              <td>
-                {record.date
-                  ? new Date(
-                      record.date
-                    ).toLocaleDateString()
-                  : "-"}
-              </td>
-
-              <td>
-                {getStudentStatus(record)}
-              </td>
-
-            </tr>
-
-          ))}
-
-        </tbody>
-
-      </table>
-
-    </div>
-  );
+function AttendanceTab({ attendance = [], user }) {
+  if (!attendance.length) return <div className="student-empty-state"><FaCalendarCheck /> No attendance has been recorded for this course yet.</div>;
+  const statusFor = record => record.students?.find(item => String(typeof item.student === "object" ? item.student?.studentId : item.student) === String(user?.studentId))?.status || "-";
+  const statuses=attendance.map(statusFor); const present=statuses.filter(s=>String(s).toLowerCase()==="present").length; const rate=attendance.length?Math.round(present/attendance.length*100):0;
+  return <section className="course-library"><div className="course-library-head"><div><span className="student-eyebrow">Participation</span><h2>Attendance</h2><p>Your recorded attendance history for this course.</p></div><span className={`attendance-rate ${rate>=75?"good":"risk"}`}>{rate}% attendance</span></div><div className="attendance-summary-strip"><span><FaCalendarCheck /><b>{attendance.length}</b><small>Sessions</small></span><span><FaCheckCircle /><b>{present}</b><small>Present</small></span><span><FaTimesCircle /><b>{attendance.length-present}</b><small>Other</small></span><span><FaClock /><b>{rate}%</b><small>Rate</small></span></div><div className="al-table-shell"><table className="al-table"><thead><tr><th>Week</th><th>Period</th><th>Date</th><th>Status</th></tr></thead><tbody>{attendance.map(r=>{const s=statusFor(r);return <tr key={r._id}><td>Week {r.week}</td><td>{r.period}</td><td>{r.date?new Date(r.date).toLocaleDateString():"-"}</td><td><span className={`attendance-status-pill ${String(s).toLowerCase()}`}>{s}</span></td></tr>})}</tbody></table></div></section>;
 }
-
 export default AttendanceTab;
