@@ -1,28 +1,28 @@
 import { useEffect, useState } from "react";
 import api from "../api";
 
+const EMPTY_STUDENT = {
+  user: "",
+  studentId: "",
+  fullName: "",
+  gender: "",
+  email: "",
+  phone: "",
+  department: "",
+  program: "",
+  year: "",
+  semester: "",
+  section: "",
+  status: "Active",
+};
+
 function StudentForm({
   onAdd,
   onUpdate,
   editingStudent,
 }) {
-  const emptyStudent = {
-    user: "",
-    studentId: "",
-    fullName: "",
-    gender: "",
-    email: "",
-    phone: "",
-    department: "",
-    program: "",
-    year: "",
-    semester: "",
-    section: "",
-    status: "Active",
-  };
-
   const [student, setStudent] =
-    useState(emptyStudent);
+    useState(EMPTY_STUDENT);
   const [formError, setFormError] = useState("");
 
   const [studentUsers, setStudentUsers] =
@@ -87,15 +87,18 @@ function StudentForm({
 
   if (editingStudent) {
       setStudent({
-        ...emptyStudent,
+        ...EMPTY_STUDENT,
         ...editingStudent,
+        user: typeof editingStudent.user === "object"
+          ? editingStudent.user?._id || ""
+          : editingStudent.user || "",
       });
 
       setSelectedDepartment(
         editingStudent.department || ""
       );
     } else {
-      setStudent(emptyStudent);
+      setStudent(EMPTY_STUDENT);
       setSelectedDepartment("");
     }
   }, [editingStudent]);
@@ -146,7 +149,7 @@ const submit = async (e) => {
 
  const missingFields = [];
 
-if (!student.user) missingFields.push("Existing User");
+if (!editingStudent && !student.user) missingFields.push("Existing User");
 if (!student.studentId) missingFields.push("Student ID");
 if (!student.fullName) missingFields.push("Full Name");
 if (!student.gender) missingFields.push("Gender");
@@ -165,7 +168,7 @@ if (missingFields.length > 0) {
     await onAdd(student);
   }
 
-  setStudent(emptyStudent);
+  setStudent(EMPTY_STUDENT);
   setSelectedDepartment("");
 };
 
@@ -194,7 +197,7 @@ return (
     setSelectedDepartment(department);
 
     setStudent({
-      ...emptyStudent,
+      ...EMPTY_STUDENT,
       department,
     });
   }}

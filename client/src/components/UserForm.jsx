@@ -1,28 +1,28 @@
 import { useEffect, useState } from "react";
 
-function UserForm({ onSave, editingUser }) {
-  const emptyUser = {
-    fullName: "",
-    email: "",
-    password: "",
-    role: "Student",
-    department: "",
-    studentId: "",
-    employeeId: "",
-    phone: "",
-  };
+const EMPTY_USER = {
+  fullName: "",
+  email: "",
+  password: "",
+  role: "Student",
+  department: "",
+  studentId: "",
+  employeeId: "",
+  phone: "",
+};
 
-  const [user, setUser] = useState(emptyUser);
+function UserForm({ onSave, editingUser }) {
+  const [user, setUser] = useState(EMPTY_USER);
   const [formError, setFormError] = useState("");
   useEffect(() => {
     if (editingUser) {
       setUser({
-        ...emptyUser,
+        ...EMPTY_USER,
         ...editingUser,
         password: "",
       });
     } else {
-      setUser(emptyUser);
+      setUser(EMPTY_USER);
     }
   }, [editingUser]);
 
@@ -67,7 +67,7 @@ function UserForm({ onSave, editingUser }) {
     await onSave(user);
 
     if (!editingUser) {
-      setUser(emptyUser);
+      setUser(EMPTY_USER);
     }
   };
 

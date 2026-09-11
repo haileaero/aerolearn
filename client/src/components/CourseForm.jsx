@@ -1,6 +1,21 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api from "../api";
 import { useUI } from "../context/UIContext";
+
+const EMPTY_COURSE = {
+  code: "",
+  name: "",
+  department: "",
+  program: "",
+  year: "",
+  semester: "",
+  creditHours: 3,
+  academicYear: "2026",
+  instructor: "",
+  description: "",
+  status: "Active",
+  schedule: { days: "", time: "", room: "" },
+};
 
 function CourseForm({
   onSave,
@@ -8,63 +23,39 @@ function CourseForm({
 }) {
   const { toast } = useUI();
   const [validationError, setValidationError] = useState("");
-  const emptyCourse = {
-    code: "",
-    name: "",
-    department: "",
-    program: "",
-    year: "",
-    semester: "",
-    creditHours: 3,
-    academicYear: "2026",
-    instructor: "",
-    description: "",
-    status: "Active",
-
-    schedule: {
-      days: "",
-      time: "",
-      room: "",
-    },
-  };
-
   const [course, setCourse] =
-    useState(emptyCourse);
+    useState(EMPTY_COURSE);
 
   const [instructors, setInstructors] =
     useState([]);
 
+  const loadInstructors = useCallback(async () => {
+    try {
+      const res = await api.get("/users/instructors");
+      setInstructors(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      toast("Unable to load instructors.", "error");
+    }
+  }, [toast]);
+
   useEffect(() => {
     loadInstructors();
-  }, []);
+  }, [loadInstructors]);
 
   useEffect(() => {
     if (editingCourse) {
       setCourse({
-        ...emptyCourse,
+        ...EMPTY_COURSE,
         ...editingCourse,
         schedule: {
-          ...emptyCourse.schedule,
+          ...EMPTY_COURSE.schedule,
           ...(editingCourse.schedule || {}),
         },
       });
     } else {
-      setCourse(emptyCourse);
+      setCourse(EMPTY_COURSE);
     }
   }, [editingCourse]);
-
-  const loadInstructors = async () => {
-    try {
-      const res = await api.get(
-        "/users/instructors"
-      );
-
-      setInstructors(res.data);
-
-    } catch {
-      toast("Unable to load instructors.", "error");
-    }
-  };
 
   const handleChange = (e) => {
 
@@ -109,7 +100,7 @@ function CourseForm({
     await onSave(course);
 
     if (!editingCourse) {
-      setCourse(emptyCourse);
+      setCourse(EMPTY_COURSE);
     }
 
   };

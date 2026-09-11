@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -51,18 +52,7 @@ function CourseDetails() {
   // LOAD COURSE DATA
   // =====================================================
 
-  useEffect(() => {
-
-    if (!id) {
-      return;
-    }
-
-    loadCourse();
-
-  }, [id]);
-
-
-  const loadCourse = async () => {
+  const loadCourse = useCallback(async () => {
 
     try {
 
@@ -111,8 +101,14 @@ function CourseDetails() {
             "/learning-materials"
           );
 
+        const materialRows = Array.isArray(materialRes.data)
+          ? materialRes.data
+          : Array.isArray(materialRes.data?.materials)
+            ? materialRes.data.materials
+            : [];
+
         const courseMaterials =
-          materialRes.data.filter(
+          materialRows.filter(
             (material) => {
 
               const materialCourseId =
@@ -158,8 +154,14 @@ function CourseDetails() {
             "/assessment"
           );
 
+        const assessmentRows = Array.isArray(assessmentRes.data)
+          ? assessmentRes.data
+          : Array.isArray(assessmentRes.data?.assessments)
+            ? assessmentRes.data.assessments
+            : [];
+
         const courseAssessments =
-          assessmentRes.data.filter(
+          assessmentRows.filter(
             (assessment) => {
 
               const assessmentCourseId =
@@ -206,8 +208,14 @@ function CourseDetails() {
             "/attendance"
           );
 
+        const attendanceRows = Array.isArray(attendanceRes.data)
+          ? attendanceRes.data
+          : Array.isArray(attendanceRes.data?.attendance)
+            ? attendanceRes.data.attendance
+            : [];
+
         const courseAttendance =
-          attendanceRes.data.filter(
+          attendanceRows.filter(
             (attendanceRecord) => {
 
               const attendanceCourseId =
@@ -254,7 +262,13 @@ function CourseDetails() {
 
     }
 
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    loadCourse();
+  }, [id, loadCourse]);
+
   // =====================================================
   // COURSE STATISTICS
   // =====================================================
