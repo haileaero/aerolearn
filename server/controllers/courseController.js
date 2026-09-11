@@ -146,6 +146,7 @@ export const createCourse = async (req, res) => {
       creditHours,
       semester,
       studyYear,
+      academicYear,
       department,
       instructor,
       thumbnail,
@@ -192,6 +193,8 @@ export const createCourse = async (req, res) => {
       semester,
 
       studyYear,
+
+      academicYear,
 
       department,
 
@@ -303,6 +306,10 @@ export const updateCourse = async (req, res) => {
     course.studyYear =
       req.body.studyYear ??
       course.studyYear;
+
+    course.academicYear =
+      req.body.academicYear ??
+      course.academicYear;
 
     course.department =
       req.body.department ??

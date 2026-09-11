@@ -5,10 +5,16 @@ import axios from "axios";
 // made edits look as if they saved and then immediately reverted to the old
 // production values.
 const configuredApiUrl = String(import.meta.env.VITE_API_URL || "").trim();
-const apiBaseUrl = configuredApiUrl ||
-  (import.meta.env.DEV
-    ? "http://localhost:5000/api"
-    : "https://aerolearn.onrender.com/api");
+const configuredLocalApiUrl = String(import.meta.env.VITE_LOCAL_API_URL || "").trim();
+
+// In local Vite development, always prefer the local backend. This is
+// intentionally evaluated before VITE_API_URL because an old production
+// VITE_API_URL in client/.env can otherwise make localhost:5173 silently
+// talk to the deployed Render API. VITE_LOCAL_API_URL can override the
+// default only when a developer intentionally runs the API on another port.
+const apiBaseUrl = import.meta.env.DEV
+  ? (configuredLocalApiUrl || "http://localhost:5000/api")
+  : (configuredApiUrl || "https://aerolearn.onrender.com/api");
 
 const api = axios.create({
   baseURL: apiBaseUrl.replace(/\/$/, ""),

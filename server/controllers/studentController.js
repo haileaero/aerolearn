@@ -62,6 +62,7 @@ export const getStudents = async (req, res) => {
     const total = await Student.countDocuments(filter);
 
    const students = await Student.find(filter)
+  .populate("user", "fullName email studentId department phone role")
   .populate("advisor", "fullName")
   .populate({
     path: "courses",
@@ -101,6 +102,7 @@ export const getStudents = async (req, res) => {
 export const getStudentById = async (req, res) => {
   try {
     const student = await Student.findById(req.params.id)
+  .populate("user", "fullName email studentId department phone role")
   .populate("advisor", "fullName email")
   .populate({
     path: "courses",
@@ -143,6 +145,7 @@ export const getStudentProfile = async (req, res) => {
     const student = await Student.findOne({
   studentId: req.params.studentId,
 })
+  .populate("user", "fullName email studentId department phone role")
   .populate("advisor", "fullName email")
   .populate({
     path: "courses",
@@ -175,6 +178,7 @@ export const getStudentProfile = async (req, res) => {
 export const createStudent = async (req, res) => {
   try {
     const {
+      user,
       studentId,
       fullName,
       gender,
@@ -233,6 +237,7 @@ export const createStudent = async (req, res) => {
 });
 
 const student = await Student.create({
+  user: user || null,
   studentId,
   fullName,
   gender,
@@ -320,6 +325,13 @@ export const updateStudent = async (req, res) => {
           message: "Email already exists.",
         });
       }
+    }
+
+    if (req.body.user !== undefined) {
+      const userId = req.body.user && typeof req.body.user === "object"
+        ? req.body.user._id
+        : req.body.user;
+      student.user = userId || null;
     }
 
     student.studentId =
@@ -475,7 +487,8 @@ export const searchStudents = async (req, res) => {
         },
       ],
     })
-      .populate("advisor", "fullName")
+      .populate("user", "fullName email studentId department phone role")
+  .populate("advisor", "fullName")
 .populate({
   path: "courses",
   populate: {
