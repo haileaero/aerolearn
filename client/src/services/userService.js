@@ -27,12 +27,36 @@ export const updateProfile = async (profile) => {
     };
 
     const { data } = await api.put("/auth/profile", payload);
-    const updated = data?.user || data;
+    const responseUser = data?.user || data;
+
+    // Read the profile back from the database after the PUT. This makes the
+    // UI reflect what was actually persisted instead of trusting a stale or
+    // partial update response from an older backend deployment.
+    const { data: verifiedData } = await api.get("/auth/profile", {
+      params: { _ts: Date.now() },
+      headers: { "Cache-Control": "no-cache" },
+    });
+    const updated = verifiedData?.user || verifiedData || responseUser;
+
+    const editableFields = [
+      "fullName", "email", "department", "phone", "gender", "address",
+    ];
+    const mismatch = editableFields.find((field) => {
+      const requested = String(payload[field] ?? "").trim();
+      const persisted = String(updated?.[field] ?? "").trim();
+      return requested !== persisted;
+    });
+
+    if (mismatch) {
+      throw new Error(
+        `The server did not persist the ${mismatch} change. Make sure the current backend is running/deployed and the frontend is pointing to it.`
+      );
+    }
 
     if (updated) {
       const current = JSON.parse(localStorage.getItem("user") || "null") || {};
       const merged = { ...current, ...updated };
-      const token = updated.token || current.token || localStorage.getItem("token") || "";
+      const token = updated.token || responseUser?.token || current.token || localStorage.getItem("token") || "";
       if (token) merged.token = token;
       localStorage.setItem("user", JSON.stringify(merged));
       if (token) localStorage.setItem("token", token);

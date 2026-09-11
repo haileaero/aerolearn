@@ -23,6 +23,7 @@ function Profile() {
   const { updateUser } = useContext(AuthContext);
   const { toast } = useUI();
   const fileInputRef = useRef(null);
+  const profileLoadedRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -33,6 +34,12 @@ function Profile() {
   const [passwords, setPasswords] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
 
   useEffect(() => {
+    // Load the profile exactly once for this mounted page. In development,
+    // React StrictMode can run effects twice; the ref prevents a late second
+    // response from overwriting fields while the user is already typing.
+    if (profileLoadedRef.current) return;
+    profileLoadedRef.current = true;
+
     let active = true;
     const loadProfile = async () => {
       try {
@@ -41,16 +48,16 @@ function Profile() {
         const normalized = { ...EMPTY_PROFILE, ...(data || {}) };
         setProfile(normalized);
         setEditDraft(normalized);
-        updateUser(normalized);
       } catch (error) {
         if (active) setMessage(error.message || "Unable to load profile.");
       } finally {
         if (active) setLoading(false);
       }
     };
+
     loadProfile();
     return () => { active = false; };
-  }, [updateUser]);
+  }, []);
 
   const beginEdit = () => {
     setEditDraft({ ...profile });
