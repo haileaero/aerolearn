@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { FaArrowRight, FaBookOpen, FaClock, FaLayerGroup, FaUserTie } from "react-icons/fa";
 
+const fallbackImage = "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200";
+
 function StudentCourses({ courses = [] }) {
   return (
     <section className="student-courses-section">
@@ -17,34 +19,41 @@ function StudentCourses({ courses = [] }) {
         <div className="empty-state"><FaBookOpen style={{ marginRight: 8 }} />No courses assigned yet.</div>
       ) : (
         <div className="student-course-grid premium-course-grid">
-          {courses.map((course, index) => (
-            <article key={course._id} className={`student-course-card premium-course-card course-tone-${index % 4}`}>
-              <div className="student-course-cover">
-                <img
-                  src={course.thumbnail || "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200"}
-                  alt={course.name}
-                />
-                <div className="course-cover-shade" />
-                <span className="student-course-code">{course.code || "COURSE"}</span>
-                <span className="course-status-dot">Active</span>
-              </div>
-              <div className="student-course-body">
-                <h3>{course.name}</h3>
-                <div className="course-compact-meta">
-                  <span><FaUserTie /> {course.instructor?.fullName || "Instructor"}</span>
-                  {course.creditHours && <span><FaClock /> {course.creditHours} credits</span>}
-                  {course.semester && <span><FaLayerGroup /> {course.semester}</span>}
+          {courses.map((course, index) => {
+            const image = course.thumbnail || fallbackImage;
+
+            return (
+              <article key={course._id} className={`student-course-card premium-course-card course-tone-${index % 4}`}>
+                <div className="student-course-cover student-course-cover-complete">
+                  <div
+                    className="student-course-cover-backdrop"
+                    style={{ backgroundImage: `url(${image})` }}
+                    aria-hidden="true"
+                  />
+                  <img src={image} alt={course.name} />
+                  <div className="course-cover-shade" />
+                  <span className="student-course-code">{course.code || "COURSE"}</span>
+                  <span className="course-status-dot">Active</span>
                 </div>
-                <div className="course-progress-line"><span style={{ width: `${58 + (index % 4) * 8}%` }} /></div>
-                <div className="course-card-footer">
-                  <small>Course workspace</small>
-                  <Link className="student-course-link" to={`/course/${course._id}`}>
-                    <span>Continue</span><FaArrowRight />
-                  </Link>
+
+                <div className="student-course-body">
+                  <h3>{course.name}</h3>
+                  <div className="course-compact-meta">
+                    <span><FaUserTie /> {course.instructor?.fullName || "Instructor"}</span>
+                    {course.creditHours && <span><FaClock /> {course.creditHours} credits</span>}
+                    {course.semester && <span><FaLayerGroup /> {course.semester}</span>}
+                  </div>
+                  <div className="course-progress-line" aria-hidden="true"><span style={{ width: `${58 + (index % 4) * 8}%` }} /></div>
+                  <div className="course-card-footer">
+                    <small>Course workspace</small>
+                    <Link className="student-course-link" to={`/course/${course._id}`}>
+                      <span>Open course</span><FaArrowRight />
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       )}
     </section>

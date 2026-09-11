@@ -876,3 +876,327 @@ button { -webkit-tap-highlight-color: transparent; }
 .al-toast button{width:24px!important;height:24px!important;padding:0!important;display:grid!important;place-items:center!important;background:transparent!important;color:#94a3b8!important;box-shadow:none!important;transform:none!important}
 .al-toast button:hover{background:#f1f5f9!important;color:#475569!important}
 @media(max-width:600px){.al-dialog-actions{display:grid!important;grid-template-columns:1fr 1fr!important}.al-dialog-actions button{width:100%!important;min-width:0!important}}
+
+/* ============================================================
+   AEROLEARN 4.0 - ATTENDANCE REGISTER RELIABILITY + REPORT UI
+============================================================ */
+.attendance-workspace .message-strip.warning{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.attendance-class-strip{display:grid;grid-template-columns:2fr 1fr 1fr .8fr;gap:6px;margin:0 0 9px}
+.attendance-class-strip>div{display:grid;grid-template-columns:28px 1fr;grid-template-rows:auto auto;column-gap:8px;align-items:center;background:#fff;border:1px solid #e4eaf2;border-radius:8px;padding:8px 10px;min-width:0}
+.attendance-class-strip svg{grid-row:1/3;width:27px;height:27px;padding:7px;border-radius:7px;background:#eff6ff;color:#2563eb}
+.attendance-class-strip span{font-size:8px;text-transform:uppercase;letter-spacing:.55px;font-weight:800;color:#94a3b8}
+.attendance-class-strip strong{font-size:10px;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.attendance-workspace .ops-history-list button{display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;column-gap:4px;align-items:center}
+.attendance-workspace .ops-history-list button small{grid-column:1/3;font-size:7px;opacity:.72}
+.attendance-status-legend{display:flex;align-items:center;gap:14px;padding:7px 11px;border-top:1px solid #e8eef5;border-bottom:1px solid #e8eef5;background:#fbfdff}
+.attendance-status-legend span{display:inline-flex;align-items:center;gap:5px;font-size:8.5px;font-weight:800;color:#475569}
+.attendance-status-legend i{display:inline-block;width:7px;height:7px;border-radius:50%}
+.attendance-status-legend .present-dot{background:#16a34a}.attendance-status-legend .absent-dot{background:#dc2626}.attendance-status-legend .late-dot{background:#d97706}
+.attendance-status-legend small{margin-left:auto;font-size:8px;color:#94a3b8}
+.attendance-modern-table th:nth-child(1){width:42px}.attendance-modern-table th:nth-child(2){width:140px}.attendance-modern-table th:nth-child(4),.attendance-modern-table th:nth-child(5){width:95px}.attendance-modern-table th:last-child{width:245px}
+.attendance-modern-table td{vertical-align:middle}.attendance-modern-table .table-id{display:inline-flex;align-items:center;min-height:23px;padding:3px 8px;border-radius:6px;background:#eff6ff;color:#1d4ed8;font-size:9px;font-weight:850;letter-spacing:.15px}
+.attendance-student-name{display:block;color:#0f172a;font-size:10px}.attendance-row-warning td{background:#fff7ed!important}.attendance-row-warning .attendance-student-name{color:#9a3412}
+.attendance-workspace .attendance-status-switch{display:inline-grid!important;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px!important;background:#f1f5f9!important;border:1px solid #e2e8f0!important;border-radius:8px!important;min-width:222px}
+.attendance-workspace .attendance-status-switch button{appearance:none!important;border:1px solid transparent!important;border-radius:6px!important;padding:6px 9px!important;background:#fff!important;color:#64748b!important;font-size:8.5px!important;font-weight:850!important;line-height:1!important;box-shadow:none!important;transform:none!important;cursor:pointer!important;transition:background .15s ease,color .15s ease,border-color .15s ease!important}
+.attendance-workspace .attendance-status-switch button:hover{border-color:#cbd5e1!important;color:#0f172a!important;background:#f8fafc!important}
+.attendance-workspace .attendance-status-switch .present.active{background:#16a34a!important;border-color:#16a34a!important;color:#fff!important;box-shadow:0 3px 8px rgba(22,163,74,.18)!important}
+.attendance-workspace .attendance-status-switch .absent.active{background:#dc2626!important;border-color:#dc2626!important;color:#fff!important;box-shadow:0 3px 8px rgba(220,38,38,.18)!important}
+.attendance-workspace .attendance-status-switch .late.active{background:#d97706!important;border-color:#d97706!important;color:#fff!important;box-shadow:0 3px 8px rgba(217,119,6,.18)!important}
+.attendance-report-actions{flex-wrap:wrap}.attendance-report-actions .btn-compact{white-space:nowrap}
+@media(max-width:1100px){.attendance-class-strip{grid-template-columns:1fr 1fr}.attendance-modern-table th:last-child{width:220px}.attendance-workspace .attendance-status-switch{min-width:205px}}
+@media(max-width:700px){.attendance-class-strip{grid-template-columns:1fr}.attendance-status-legend{align-items:flex-start;flex-wrap:wrap}.attendance-status-legend small{width:100%;margin-left:0}.attendance-report-actions .btn-compact{flex:1;justify-content:center}.attendance-workspace .attendance-status-switch{min-width:190px}}
+
+/* =========================================================
+   AeroLearn 4.1 — Student Course Showcase
+   Keeps course artwork fully visible and removes duplicated copy.
+========================================================= */
+.premium-course-grid{
+  grid-template-columns:repeat(auto-fill,minmax(300px,410px))!important;
+  justify-content:start;
+  align-items:start;
+}
+.premium-course-card{
+  width:100%;
+  max-width:410px;
+}
+.premium-course-card .student-course-cover.student-course-cover-complete{
+  height:auto!important;
+  aspect-ratio:16/9;
+  background:#081a35;
+  isolation:isolate;
+}
+.student-course-cover-backdrop{
+  position:absolute;
+  inset:-14px;
+  z-index:0;
+  background-position:center;
+  background-size:cover;
+  filter:blur(18px) saturate(.8);
+  opacity:.48;
+  transform:scale(1.08);
+}
+.premium-course-card .student-course-cover-complete>img{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  width:100%!important;
+  height:100%!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  transform:none!important;
+  padding:6px;
+}
+.student-course-cover-complete .course-cover-shade{
+  z-index:2;
+  background:linear-gradient(180deg,rgba(5,18,39,.03) 40%,rgba(5,18,39,.72) 100%);
+}
+.student-course-cover-complete .student-course-code,
+.student-course-cover-complete .course-status-dot{z-index:3}
+.premium-course-card:hover .student-course-cover-complete>img{transform:none!important}
+
+.course-identity-hero{
+  position:relative;
+  display:grid;
+  grid-template-columns:minmax(0,1.12fr) minmax(320px,.88fr);
+  min-height:250px;
+  margin-bottom:10px;
+  overflow:hidden;
+  border:1px solid rgba(92,129,191,.2);
+  border-radius:18px;
+  background:linear-gradient(126deg,#071a38 0%,#0d3364 55%,#1558a5 100%);
+  box-shadow:0 14px 32px rgba(20,52,104,.14);
+  color:#fff;
+}
+.course-identity-hero:before{
+  content:"";
+  position:absolute;
+  width:360px;
+  height:360px;
+  left:-170px;
+  top:-230px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(66,153,225,.24),transparent 68%);
+  pointer-events:none;
+}
+.course-identity-copy{
+  position:relative;
+  z-index:2;
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  justify-content:center;
+  padding:24px 28px;
+}
+.course-identity-copy .course-header-topline{margin-bottom:16px}
+.course-identity-copy .course-code{
+  margin:0!important;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.1);
+  color:#dbeafe;
+}
+.course-identity-kicker{
+  margin-bottom:5px;
+  color:#93c5fd;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:1.2px;
+  text-transform:uppercase;
+}
+.course-identity-copy h1{
+  margin:0;
+  max-width:720px;
+  font-size:30px;
+  line-height:1.12;
+  letter-spacing:-.65px;
+}
+.course-identity-intro{
+  max-width:650px;
+  margin:9px 0 0;
+  color:#cfe0f7;
+  font-size:10.5px;
+  line-height:1.55;
+}
+.course-identity-copy .course-hero-meta{margin-top:16px}
+.course-identity-copy .course-hero-meta span{
+  padding:5px 8px;
+  background:rgba(255,255,255,.075);
+  border-color:rgba(255,255,255,.12);
+  color:#e5eefb;
+}
+.course-identity-visual{
+  position:relative;
+  min-height:250px;
+  overflow:hidden;
+  background:#06162e;
+  border-left:1px solid rgba(255,255,255,.08);
+  isolation:isolate;
+}
+.course-identity-visual-backdrop{
+  position:absolute;
+  inset:-22px;
+  z-index:0;
+  background-position:center;
+  background-size:cover;
+  filter:blur(22px) saturate(.85);
+  opacity:.48;
+  transform:scale(1.08);
+}
+.course-identity-visual:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:2;
+  background:linear-gradient(90deg,rgba(7,26,56,.62) 0%,rgba(7,26,56,.08) 35%,rgba(7,26,56,.1) 100%);
+  pointer-events:none;
+}
+.course-identity-visual>img{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  width:100%;
+  height:100%;
+  padding:12px;
+  object-fit:contain;
+  object-position:center;
+}
+.course-identity-visual-badge{
+  position:absolute;
+  right:12px;
+  bottom:12px;
+  z-index:3;
+  padding:5px 8px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:999px;
+  background:rgba(5,18,39,.7);
+  color:#dbeafe;
+  font-size:7px;
+  font-weight:850;
+  backdrop-filter:blur(8px);
+}
+
+.course-overview-pro{
+  padding:18px!important;
+  border:1px solid #e1e8f2;
+  box-shadow:0 7px 22px rgba(24,52,99,.05)!important;
+}
+.course-overview-heading{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:12px;
+}
+.course-section-kicker{
+  display:block;
+  margin-bottom:3px;
+  color:#2f6fd8;
+  font-size:7.5px;
+  font-weight:900;
+  letter-spacing:1.05px;
+  text-transform:uppercase;
+}
+.course-overview-heading h2{
+  margin:0!important;
+  color:#15356f!important;
+  font-size:20px;
+  letter-spacing:-.25px;
+}
+.course-overview-code{
+  flex:0 0 auto;
+  padding:5px 8px;
+  border-radius:999px;
+  background:#eef5ff;
+  color:#2563eb;
+  font-size:8px;
+  font-weight:900;
+}
+.course-about-panel{
+  display:grid;
+  grid-template-columns:38px minmax(0,1fr);
+  gap:12px;
+  align-items:start;
+  padding:13px 14px;
+  border:1px solid #e4eaf3;
+  border-radius:12px;
+  background:linear-gradient(135deg,#fbfdff,#f6f9fd);
+}
+.course-about-mark{
+  display:grid;
+  width:36px;
+  height:36px;
+  place-items:center;
+  border-radius:10px;
+  background:#eaf2ff;
+  color:#2563eb;
+  font-size:15px;
+}
+.course-overview-pro .course-description{
+  margin:0!important;
+  color:#53657f!important;
+  font-size:10.5px;
+  line-height:1.68!important;
+}
+.overview-grid-pro{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  margin-top:10px!important;
+}
+.overview-card-pro{
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr);
+  gap:9px;
+  align-items:center;
+  min-height:74px;
+  padding:10px!important;
+  text-align:left!important;
+  border:1px solid #e4eaf2!important;
+  background:#fff!important;
+  box-shadow:none!important;
+  transform:none!important;
+}
+.overview-card-icon{
+  display:grid;
+  width:32px;
+  height:32px;
+  place-items:center;
+  border-radius:9px;
+  font-size:13px;
+}
+.overview-card-pro span{
+  margin:0 0 1px!important;
+  color:#718096!important;
+  font-size:7.5px!important;
+  font-weight:800!important;
+  line-height:1.2;
+}
+.overview-card-pro h3{
+  margin:0;
+  color:#14284b;
+  font-size:18px;
+  line-height:1.1;
+}
+.overview-card-pro small{color:#9aa6b8;font-size:6.8px}
+.overview-tone-blue .overview-card-icon{background:#eaf2ff;color:#2563eb}
+.overview-tone-violet .overview-card-icon{background:#f2edff;color:#7c3aed}
+.overview-tone-green .overview-card-icon{background:#e7f8f1;color:#059669}
+.overview-tone-amber .overview-card-icon{background:#fff6df;color:#d97706}
+
+@media(max-width:980px){
+  .course-identity-hero{grid-template-columns:1fr minmax(280px,.8fr)}
+  .overview-grid-pro{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:760px){
+  .course-identity-hero{grid-template-columns:1fr}
+  .course-identity-copy{padding:20px}
+  .course-identity-copy h1{font-size:25px}
+  .course-identity-visual{min-height:210px;border-left:0;border-top:1px solid rgba(255,255,255,.08)}
+  .premium-course-grid{grid-template-columns:minmax(0,1fr)!important}
+  .premium-course-card{max-width:none}
+}
+@media(max-width:520px){
+  .course-identity-copy{padding:17px}
+  .course-identity-visual{min-height:185px}
+  .course-about-panel{grid-template-columns:1fr}
+  .course-about-mark{display:none}
+  .overview-grid-pro{grid-template-columns:1fr!important}
+}

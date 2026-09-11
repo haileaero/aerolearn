@@ -1,5 +1,51 @@
 import Attendance from "../models/attendance.js";
 import Course from "../models/course.js";
+import Student from "../models/student.js";
+
+
+const ATTENDANCE_STUDENT_SELECT = "studentId fullName department section year status";
+
+const buildAttendanceRows = async (rows = []) => {
+  const normalized = Array.isArray(rows) ? rows : [];
+  const ids = normalized
+    .map((row) => row?.student && typeof row.student === "object" ? row.student._id : row?.student)
+    .filter(Boolean);
+
+  const roster = await Student.find({ _id: { $in: ids } })
+    .select(ATTENDANCE_STUDENT_SELECT)
+    .lean();
+  const byId = new Map(roster.map((student) => [String(student._id), student]));
+
+  return normalized.map((row) => {
+    const id = row?.student && typeof row.student === "object" ? row.student._id : row?.student;
+    const student = id ? byId.get(String(id)) : null;
+    return {
+      student: id,
+      studentId: student?.studentId || row?.studentId || "",
+      studentName: student?.fullName || row?.studentName || "",
+      section: student?.section || row?.section || "",
+      year: student?.year || row?.year || "",
+      status: row?.status || "Present",
+    };
+  });
+};
+
+const backfillAttendanceSnapshots = async (attendance) => {
+  if (!attendance || !Array.isArray(attendance.students) || attendance.students.length === 0) return attendance;
+  let changed = false;
+  for (const item of attendance.students) {
+    const student = item.student && typeof item.student === "object" ? item.student : null;
+    if (!student) continue;
+    if (!item.studentId && student.studentId) { item.studentId = student.studentId; changed = true; }
+    if (!item.studentName && student.fullName) { item.studentName = student.fullName; changed = true; }
+    if (!item.section && student.section) { item.section = student.section; changed = true; }
+    if (!item.year && student.year) { item.year = student.year; changed = true; }
+  }
+  // Do not mutate historical records during a GET request. New/updated sessions
+  // persist snapshots through buildAttendanceRows; this only enriches the response.
+  void changed;
+  return attendance;
+};
 
 /* ============================================================
    GET ALL ATTENDANCE SESSIONS
@@ -22,12 +68,14 @@ export const getAttendance = async (
 
         .populate(
           "students.student",
-          "studentId fullName department"
+          "studentId fullName department section year status"
         )
 
         .sort({
           date: -1,
         });
+
+    await Promise.all(attendance.map((item) => backfillAttendanceSnapshots(item)));
 
     res.status(200).json(
       attendance
@@ -69,7 +117,7 @@ export const getAttendanceById =
 
           .populate(
             "students.student",
-            "studentId fullName department"
+            "studentId fullName department section year status"
           );
 
       if (!attendance) {
@@ -82,6 +130,8 @@ export const getAttendanceById =
         });
 
       }
+
+      await backfillAttendanceSnapshots(attendance);
 
       res.status(200).json(
         attendance
@@ -138,7 +188,7 @@ export const getAttendanceByCourseWeek =
 
           .populate(
             "students.student",
-            "studentId fullName department"
+            "studentId fullName department section year status"
           );
 
       if (!attendance) {
@@ -151,6 +201,8 @@ export const getAttendanceByCourseWeek =
         });
 
       }
+
+      await backfillAttendanceSnapshots(attendance);
 
       res.status(200).json(
         attendance
@@ -224,6 +276,9 @@ export const createAttendance = async (req, res) => {
       }
     }
 
+    // Store a stable identity snapshot with each attendance row.
+    const attendanceRows = await buildAttendanceRows(students);
+
     // Create attendance
     const attendance = await Attendance.create({
       department: selectedCourse.department,
@@ -239,7 +294,7 @@ export const createAttendance = async (req, res) => {
 
       date,
 
-      students,
+      students: attendanceRows,
     });
 
     // Return populated attendance
@@ -251,8 +306,10 @@ export const createAttendance = async (req, res) => {
         )
         .populate(
           "students.student",
-          "studentId fullName department"
+          "studentId fullName department section year status"
         );
+
+    await backfillAttendanceSnapshots(populatedAttendance);
 
     res.status(201).json(
       populatedAttendance
@@ -352,7 +409,7 @@ export const updateAttendance =
       }
 
       attendance.students =
-        req.body.students;
+        await buildAttendanceRows(req.body.students);
 
       attendance.week =
         req.body.week;
@@ -376,8 +433,10 @@ export const updateAttendance =
 
           .populate(
             "students.student",
-            "studentId fullName department"
+            "studentId fullName department section year status"
           );
+
+      await backfillAttendanceSnapshots(updatedAttendance);
 
       res.status(200).json(
         updatedAttendance

@@ -108,7 +108,7 @@ export const getCourseById = async (req, res) => {
     if (req.user?.role !== "Student") {
       courseQuery = courseQuery.populate(
         "students",
-        "studentId fullName"
+        "studentId fullName section year status department"
       );
     }
 

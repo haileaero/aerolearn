@@ -8,6 +8,13 @@ const attendanceStudentSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Snapshot fields keep historical reports readable even if a student
+    // profile is later edited or removed.
+    studentId: { type: String, default: "", trim: true },
+    studentName: { type: String, default: "", trim: true },
+    section: { type: String, default: "", trim: true },
+    year: { type: String, default: "", trim: true },
+
     status: {
       type: String,
       enum: ["Present", "Absent", "Late"],

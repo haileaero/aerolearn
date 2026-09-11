@@ -349,6 +349,7 @@ function CourseDetails() {
         <CourseOverview
           course={course}
           statistics={statistics}
+          user={user}
         />
 
       )}
