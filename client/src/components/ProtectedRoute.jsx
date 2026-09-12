@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
+import { isStudent, normalizeRole } from "../utils/roles";
 
 function ProtectedRoute({
   children,
@@ -39,9 +40,9 @@ function ProtectedRoute({
   // User does not have permission for this route
   if (
     roles.length > 0 &&
-    !roles.includes(user.role)
+    !roles.map(normalizeRole).includes(normalizeRole(user.role))
   ) {
-    if (user.role === "Student") {
+    if (isStudent(user)) {
       return (
         <Navigate
           to="/my-courses"

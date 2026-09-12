@@ -5,6 +5,7 @@ import { AuthContext } from "../context/AuthContext";
 import { useUI } from "../context/UIContext";
 import { getCourses } from "../services/courseService";
 import { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement } from "../services/announcementService";
+import { canManageAcademic, isStudent } from "../utils/roles";
 
 const emptyForm = { title: "", message: "", audience: "All", priority: "Normal", expiryDate: "", isPinned: false, course: "" };
 const courseIdOf = (course) => String(course?._id || course || "");
@@ -12,7 +13,8 @@ const courseIdOf = (course) => String(course?._id || course || "");
 function Announcements() {
   const { user } = useContext(AuthContext);
   const { confirm, toast } = useUI();
-  const canManage = user?.role === "Admin" || user?.role === "Instructor";
+  const canManage = canManageAcademic(user);
+  const studentView = isStudent(user);
   const [announcements, setAnnouncements] = useState([]);
   const [courses, setCourses] = useState([]);
   const [search, setSearch] = useState("");
@@ -79,9 +81,9 @@ function Announcements() {
   const counts = useMemo(() => ({ total: announcements.length, high: announcements.filter(a => a.priority === "High").length, pinned: announcements.filter(a => a.isPinned).length }), [announcements]);
 
   return <Layout><div className="al-control-page announcement-studio">
-    <header className="al-control-header announcement-hero"><div><span className="al-eyebrow">CAMPUS COMMUNICATION</span><h1><FaBullhorn /> Announcement Center</h1><p>{canManage ? "Publish course-specific updates that reach the right learners." : "Important updates from your current courses, organized in one feed."}</p></div>{canManage && <button className={`al-primary-action ${showComposer ? "is-close" : ""}`} onClick={() => { setShowComposer(v => !v); setEditingId(null); setForm(emptyForm); }}>{showComposer ? <><FaTimes/> Close</> : <><FaPlus/> Publish update</>}</button>}</header>
+    <header className={`al-control-header announcement-hero ${studentView ? "student-announcement-hero" : ""}`}><div><span className="al-eyebrow">{studentView ? "COURSE UPDATES" : "CAMPUS COMMUNICATION"}</span><h1><FaBullhorn /> {studentView ? "Announcements" : "Announcement Center"}</h1><p>{canManage ? "Publish course-specific updates that reach the right learners." : "Stay updated with important information from your instructors and school."}</p></div>{canManage && <button className={`al-primary-action staff-only ${showComposer ? "is-close" : ""}`} onClick={() => { setShowComposer(v => !v); setEditingId(null); setForm(emptyForm); }}>{showComposer ? <><FaTimes/> Close</> : <><FaPlus/> Publish update</>}</button>}</header>
 
-    <div className="announcement-kpis"><div><FaBullhorn/><span><strong>{counts.total}</strong><small>Active updates</small></span></div><div><FaThumbtack/><span><strong>{counts.pinned}</strong><small>Pinned</small></span></div><div><FaClock/><span><strong>{counts.high}</strong><small>High priority</small></span></div><div><FaBook/><span><strong>{courses.length}</strong><small>Course feeds</small></span></div></div>
+    {canManage && <div className="announcement-kpis staff-only"><div><FaBullhorn/><span><strong>{counts.total}</strong><small>Active updates</small></span></div><div><FaThumbtack/><span><strong>{counts.pinned}</strong><small>Pinned</small></span></div><div><FaClock/><span><strong>{counts.high}</strong><small>High priority</small></span></div><div><FaBook/><span><strong>{courses.length}</strong><small>Course feeds</small></span></div></div>}
 
     {canManage && showComposer && <form className="announcement-composer" onSubmit={submitAnnouncement}>
       <div className="composer-head"><div><span>{editingId ? "EDIT UPDATE" : "NEW UPDATE"}</span><h2>{editingId ? "Update announcement" : "Publish to a course"}</h2></div><FaBullhorn/></div>
@@ -96,7 +98,7 @@ function Announcements() {
       <div className="composer-actions"><label className="pin-check"><input type="checkbox" name="isPinned" checked={form.isPinned} onChange={handleChange}/><FaThumbtack/> Pin this update</label><button className="btn-compact btn-primary" type="submit">{editingId ? "Save changes" : "Publish announcement"}</button></div>
     </form>}
 
-    <section className="announcement-toolbar"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search updates, course or message..."/><select value={courseFilter} onChange={e=>setCourseFilter(e.target.value)}><option value="All">All course feeds</option>{courses.map(c=><option value={c._id} key={c._id}>{c.code}</option>)}</select><div className="announcement-priority-tabs">{["All","High","Normal","Low"].map(p=><button key={p} className={priorityFilter===p?"active":""} onClick={()=>setPriorityFilter(p)}>{p}</button>)}</div></section>
+    <section className={`announcement-toolbar ${studentView ? "student-toolbar" : ""}`}><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search announcements..."/>{canManage && <select className="staff-only" value={courseFilter} onChange={e=>setCourseFilter(e.target.value)}><option value="All">All course feeds</option>{courses.map(c=><option value={c._id} key={c._id}>{c.code}</option>)}</select>}<div className="announcement-priority-tabs">{["All","High","Normal","Low"].map(p=><button key={p} className={priorityFilter===p?"active":""} onClick={()=>setPriorityFilter(p)}>{p}</button>)}</div></section>
 
     {loading ? <div className="student-empty-state">Loading course updates…</div> : filtered.length === 0 ? <div className="student-empty-state"><FaBullhorn/><strong>No announcements found</strong><span>Try another filter or check back later.</span></div> : <div className="announcement-feed">{filtered.map(a => <article className={`announcement-card priority-${String(a.priority || "normal").toLowerCase()} ${a.isPinned ? "is-pinned" : ""}`} key={a._id}>
       <div className="announcement-card-top"><div className="announcement-course"><FaBook/><span>{a.course?.code || "Course"}</span><small>{a.course?.name || "Course update"}</small></div><div className="announcement-badges">{a.isPinned && <span className="pin-badge"><FaThumbtack/> Pinned</span>}<span className={`priority-badge ${String(a.priority).toLowerCase()}`}>{a.priority}</span></div></div>

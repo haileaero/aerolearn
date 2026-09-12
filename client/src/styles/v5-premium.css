@@ -30,3 +30,34 @@
 /* broad finishing pass */
 .al-table-shell{box-shadow:0 10px 34px rgba(15,35,72,.055)!important}.al-table tbody tr:hover{background:#f8fbff!important}.btn-compact,.al-primary-action{transition:transform .18s ease,box-shadow .18s ease}.btn-compact:hover:not(:disabled),.al-primary-action:hover:not(:disabled){transform:translateY(-1px)}
 @media(max-width:760px){.announcement-kpis{grid-template-columns:1fr 1fr}.composer-grid{grid-template-columns:1fr}.composer-grid .span-2{grid-column:span 1}.announcement-toolbar{grid-template-columns:1fr}.announcement-feed{grid-template-columns:1fr}.announcement-priority-tabs{overflow-x:auto}.composer-actions{align-items:flex-start;gap:12px;flex-direction:column}.result-hero-actions{align-items:flex-end;flex-direction:column}.result-export-btn{padding:8px 9px;font-size:9px}}
+
+/* ==========================================================
+   AeroLearn 5.1 — role-safe actions + mobile access pass
+========================================================== */
+@media(max-width:1100px){
+  .mobile-dock.is-hidden{display:none!important;pointer-events:none!important}
+  .sidebar{z-index:2000!important}
+  .sidebar-overlay{z-index:1950!important}
+  .sidebar-nav{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain;padding-bottom:8px!important}
+  .sidebar-user{position:sticky!important;bottom:0!important;z-index:3!important;margin-top:8px!important;padding:12px 12px calc(12px + env(safe-area-inset-bottom))!important;background:linear-gradient(180deg,rgba(20,42,82,.98),rgba(12,29,62,.99))!important;border:1px solid rgba(255,255,255,.09)!important;box-shadow:0 -14px 28px rgba(4,13,33,.32)!important}
+  .sidebar-user .logout-btn{min-height:44px!important;font-size:12px!important;background:rgba(239,68,68,.16)!important;border:1px solid rgba(248,113,113,.24)!important;color:#fee2e2!important}
+  .sidebar-user .logout-btn:active{transform:scale(.985)}
+  .page-content{padding-bottom:96px!important}
+  .footer{padding-bottom:76px!important;margin-bottom:0!important}
+}
+
+/* Defense-in-depth: student shells never surface staff controls even if
+   a stale client bundle or unexpected role capitalization reaches a shared page. */
+.layout[data-role="student"] .staff-only{display:none!important}
+
+.student-announcement-hero{background:linear-gradient(125deg,#102b5f 0%,#194da6 62%,#2376df 100%)!important}
+.student-announcement-hero h1{font-size:clamp(24px,4vw,34px)!important}
+.announcement-toolbar.student-toolbar{grid-template-columns:minmax(220px,1fr) auto}
+.announcement-toolbar.student-toolbar>input{min-width:0}
+
+@media(max-width:760px){
+  .announcement-toolbar.student-toolbar{grid-template-columns:1fr!important}
+  .student-announcement-hero{padding:18px!important}
+  .student-announcement-hero p{max-width:34ch}
+  .announcement-card footer{flex-wrap:wrap}
+}

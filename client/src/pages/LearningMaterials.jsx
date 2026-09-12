@@ -11,6 +11,7 @@ import Layout from "../components/Layout";
 
 import { AuthContext } from "../context/AuthContext";
 import { useUI } from "../context/UIContext";
+import { canManageAcademic, isStudent } from "../utils/roles";
 
 import {
   FaBook,
@@ -60,9 +61,7 @@ function LearningMaterials() {
 
   const { user } = useContext(AuthContext);
 
-  const canManageMaterials =
-    user?.role === "Admin" ||
-    user?.role === "Instructor";
+  const canManageMaterials = canManageAcademic(user);
 
   const [courses, setCourses] = useState([]);
 
@@ -217,14 +216,14 @@ function LearningMaterials() {
   }
 
   const studentCourseIds = useMemo(() => {
-    if (user?.role !== "Student") return null;
+    if (!isStudent(user)) return null;
     return new Set(
       materials
         .map((material) => material.course && typeof material.course === "object" ? material.course._id : material.course)
         .filter(Boolean)
         .map(String)
     );
-  }, [materials, user?.role]);
+  }, [materials, user]);
 
   const visibleCourses = useMemo(() => {
     if (!studentCourseIds) return courses;
@@ -266,7 +265,7 @@ function LearningMaterials() {
             <h1>Learning Materials</h1>
             <p>Organize lecture notes, assignments, videos and course resources.</p>
           </div>
-          {canManageMaterials && <button className={`al-primary-action ${showUpload ? "is-close" : ""}`} onClick={() => { setShowUpload((value) => !value); setEditingId(null); }}>{showUpload ? <><FaTimes /> Close</> : <><FaPlus /> Add material</>}</button>}
+          {canManageMaterials && <button className={`al-primary-action staff-only ${showUpload ? "is-close" : ""}`} onClick={() => { setShowUpload((value) => !value); setEditingId(null); }}>{showUpload ? <><FaTimes /> Close</> : <><FaPlus /> Add material</>}</button>}
         </header>
         <nav className="ops-flow resource-flow" aria-label="Academic operations"><span><b>1</b> Attendance</span><span><b>2</b> Assessment</span><span><b>3</b> Scores</span><span><b>4</b> Results</span><span className="active"><b>5</b> Resources</span></nav>
         <div className="al-kpi-ribbon">
@@ -490,7 +489,7 @@ function LearningMaterials() {
                       <button className="resource-course-link" onClick={(e) => { e.stopPropagation(); navigate(`/course/${course?._id || material.course || ""}`); }}>Course workspace <FaArrowRight /></button>
                     )}
                     {canManageMaterials && (
-                      <div className="resource-admin-actions">
+                      <div className="resource-admin-actions staff-only">
                         <button onClick={(e) => { e.stopPropagation(); edit(material); }} className="al-row-text-btn edit"><FaPen /></button>
                         <button onClick={async (e) => { e.stopPropagation(); await remove(material._id); }} className="al-row-text-btn delete"><FaTrash /></button>
                       </div>

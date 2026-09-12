@@ -2,6 +2,7 @@ import { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import { AuthContext } from "../context/AuthContext";
+import { isAdmin } from "../utils/roles";
 import api from "../api";
 import { FaUsers, FaUserGraduate, FaBook, FaClipboardCheck, FaClipboardList, FaBullhorn, FaFolderOpen, FaArrowRight, FaPlane, FaCheckCircle, FaExclamationTriangle, FaClock } from "react-icons/fa";
 
@@ -20,10 +21,10 @@ function Dashboard() {
       try {
         setLoading(true);
         const common = [api.get("/students"), api.get("/courses"), api.get("/attendance"), api.get("/assessment"), api.get("/announcements"), api.get("/learning-materials")];
-        const results = await Promise.all(user.role === "Admin" ? [api.get("/users"), ...common] : common);
-        const offset = user.role === "Admin" ? 1 : 0;
+        const results = await Promise.all(isAdmin(user) ? [api.get("/users"), ...common] : common);
+        const offset = isAdmin(user) ? 1 : 0;
         setStats({
-          users: user.role === "Admin" ? normalize(results[0].data, "users").length : 0,
+          users: isAdmin(user) ? normalize(results[0].data, "users").length : 0,
           students: normalize(results[offset].data, "students").length,
           courses: normalize(results[offset + 1].data, "courses").length,
           attendance: normalize(results[offset + 2].data, "attendance").length,
@@ -40,8 +41,8 @@ function Dashboard() {
   }, [user]);
 
   const cards = useMemo(() => [
-    ...(user?.role === "Admin" ? [{ title: "Users", value: stats.users, icon: <FaUsers />, tone: "blue", link: "/users" }] : []),
-    { title: "Students", value: stats.students, icon: <FaUserGraduate />, tone: "green", link: user?.role === "Admin" ? "/students" : null },
+    ...(isAdmin(user) ? [{ title: "Users", value: stats.users, icon: <FaUsers />, tone: "blue", link: "/users" }] : []),
+    { title: "Students", value: stats.students, icon: <FaUserGraduate />, tone: "green", link: isAdmin(user) ? "/students" : null },
     { title: "Courses", value: stats.courses, icon: <FaBook />, tone: "violet", link: "/courses" },
     { title: "Attendance", value: stats.attendance, icon: <FaClipboardCheck />, tone: "amber", link: "/attendance" },
     { title: "Assessments", value: stats.assessments, icon: <FaClipboardList />, tone: "red", link: "/assessment" },
@@ -67,7 +68,7 @@ function Dashboard() {
 
       <div className="command-grid">
         <section className="command-card command-pulse"><div className="command-card-head"><div><h2>Academic pulse</h2><p>Relative activity across your workspace</p></div><span className="live-badge"><i/> LIVE</span></div>
-          <div className="pulse-list">{cards.slice(user?.role === "Admin" ? 1 : 0).map(c => <div className="pulse-row" key={c.title}><span>{c.title}</span><div><i className={`pulse-${c.tone}`} style={{width:`${Math.max(8,(c.value/maxValue)*100)}%`}}/></div><strong>{c.value}</strong></div>)}</div>
+          <div className="pulse-list">{cards.slice(isAdmin(user) ? 1 : 0).map(c => <div className="pulse-row" key={c.title}><span>{c.title}</span><div><i className={`pulse-${c.tone}`} style={{width:`${Math.max(8,(c.value/maxValue)*100)}%`}}/></div><strong>{c.value}</strong></div>)}</div>
         </section>
         <section className="command-card"><div className="command-card-head"><div><h2>Priority desk</h2><p>Fast routes for today’s work</p></div></div>
           <div className="priority-list">{actions.map(a => <Link to={a.link} key={a.title} className={`priority-item priority-${a.tone}`}><span>{a.icon}</span><div><strong>{a.title}</strong><small>{a.text}</small></div><FaArrowRight/></Link>)}</div>

@@ -3,11 +3,14 @@ import Student from "../models/student.js";
 import Course from "../models/course.js";
 
 const activeOnly = () => ({ $or: [{ expiryDate: null }, { expiryDate: { $gte: new Date() } }] });
+const roleOf = (user) => String(user?.role || "").trim().toLowerCase();
+const isStudent = (user) => roleOf(user) === "student";
+const isInstructor = (user) => roleOf(user) === "instructor";
 
 export const getAnnouncements = async (req, res) => {
   try {
     const filter = { ...activeOnly() };
-    if (req.user?.role === "Student") {
+    if (isStudent(req.user)) {
       const student = await Student.findOne({ studentId: req.user.studentId }).select("courses department year semester status");
       if (!student || student.status !== "Active") return res.json([]);
       let courseIds = (student.courses || []).map(String);
@@ -15,7 +18,7 @@ export const getAnnouncements = async (req, res) => {
       courseIds = [...new Set([...courseIds, ...eligible.map(c => String(c._id))])];
       filter.course = { $in: courseIds };
       filter.audience = { $in: ["All", "Students"] };
-    } else if (req.user?.role === "Instructor") {
+    } else if (isInstructor(req.user)) {
       filter.audience = { $in: ["All", "Instructors", "Students"] };
     }
     const announcements = await Announcement.find(filter)
@@ -33,13 +36,22 @@ export const getAnnouncementById = async (req, res) => {
   try {
     const announcement = await Announcement.findById(req.params.id)
       .populate("createdBy", "fullName email role")
-      .populate("course", "code name department");
+      .populate("course", "code name department studyYear semester");
     if (!announcement) return res.status(404).json({ message: "Announcement not found." });
-    if (req.user?.role === "Student") {
+    if (isStudent(req.user)) {
       const student = await Student.findOne({ studentId: req.user.studentId }).select("courses department year semester status");
-      const eligible = student && student.status === "Active" && announcement.course &&
-        String(student.department) === String(announcement.course.department);
-      if (!eligible || !["All", "Students"].includes(announcement.audience)) return res.status(403).json({ message: "Announcement not available for this account." });
+      if (!student || student.status !== "Active" || !announcement.course) {
+        return res.status(403).json({ message: "Announcement not available for this account." });
+      }
+      const assignedIds = new Set((student.courses || []).map(String));
+      const courseMatchesCurrentStudy =
+        String(student.department) === String(announcement.course.department) &&
+        String(student.year || "") === String(announcement.course.studyYear || student.year || "") &&
+        String(student.semester || "") === String(announcement.course.semester || student.semester || "");
+      const eligible = assignedIds.has(String(announcement.course._id)) || courseMatchesCurrentStudy;
+      if (!eligible || !["All", "Students"].includes(announcement.audience)) {
+        return res.status(403).json({ message: "Announcement not available for this account." });
+      }
     }
     res.status(200).json(announcement);
   } catch (error) {
@@ -55,7 +67,7 @@ export const createAnnouncement = async (req, res) => {
     const courseDoc = await Course.findById(course).select("department");
     if (!courseDoc) return res.status(400).json({ message: "Selected course was not found." });
     const announcement = await Announcement.create({ title, message, audience, priority, expiryDate: expiryDate || null, isPinned, course, department: department || courseDoc.department, createdBy: req.user._id });
-    const populated = await Announcement.findById(announcement._id).populate("createdBy", "fullName email role").populate("course", "code name department");
+    const populated = await Announcement.findById(announcement._id).populate("createdBy", "fullName email role").populate("course", "code name department studyYear semester");
     res.status(201).json(populated);
   } catch (error) {
     console.error(error);
@@ -77,7 +89,7 @@ export const updateAnnouncement = async (req, res) => {
       announcement.department = courseDoc.department;
     }
     await announcement.save();
-    const updated = await Announcement.findById(announcement._id).populate("createdBy", "fullName email role").populate("course", "code name department");
+    const updated = await Announcement.findById(announcement._id).populate("createdBy", "fullName email role").populate("course", "code name department studyYear semester");
     res.status(200).json(updated);
   } catch (error) {
     console.error(error);

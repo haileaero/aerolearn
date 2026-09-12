@@ -15,6 +15,7 @@ import {
   FaPlane,
 } from "react-icons/fa";
 import { AuthContext } from "../context/AuthContext";
+import { isAdmin, isInstructor, isStudent } from "../utils/roles";
 
 function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ function Sidebar({ isOpen, onClose }) {
         </div>
 
         <nav className="sidebar-nav">
-          {(user?.role === "Admin" || user?.role === "Instructor") && (
+          {(isAdmin(user) || isInstructor(user)) && (
             <>
               <p className="sidebar-title">Workspace</p>
               <NavLink to="/dashboard" onClick={handleNavigation}>
@@ -55,7 +56,7 @@ function Sidebar({ isOpen, onClose }) {
             </>
           )}
 
-          {user?.role === "Admin" && (
+          {isAdmin(user) && (
             <>
               <p className="sidebar-title">Administration</p>
               <NavLink to="/users" onClick={handleNavigation}>
@@ -67,7 +68,7 @@ function Sidebar({ isOpen, onClose }) {
             </>
           )}
 
-          {(user?.role === "Admin" || user?.role === "Instructor") && (
+          {(isAdmin(user) || isInstructor(user)) && (
             <>
               <p className="sidebar-title">Academic</p>
               <NavLink to="/courses" onClick={handleNavigation}>
@@ -91,7 +92,7 @@ function Sidebar({ isOpen, onClose }) {
             </>
           )}
 
-          {user?.role === "Student" && (
+          {isStudent(user) && (
             <>
               <p className="sidebar-title">My Learning</p>
               <NavLink to="/my-courses" onClick={handleNavigation}>

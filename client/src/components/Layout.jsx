@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import MobileDock from "./MobileDock";
+import { AuthContext } from "../context/AuthContext";
+import { normalizeRole } from "../utils/roles";
 
 import {
   useNavigate,
@@ -18,6 +20,7 @@ import {
 function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useContext(AuthContext);
 
   const [sidebarOpen, setSidebarOpen] =
     useState(false);
@@ -25,7 +28,7 @@ function Layout({ children }) {
   const showBack = location.pathname.startsWith("/course/") || location.pathname.startsWith("/assessment/");
 
   return (
-    <div className="layout">
+    <div className="layout" data-role={normalizeRole(user?.role) || "guest"}>
 
       {/* ================= SIDEBAR ================= */}
 
@@ -72,7 +75,7 @@ function Layout({ children }) {
         </main>
 
         <Footer />
-        <MobileDock />
+        <MobileDock hidden={sidebarOpen} />
 
       </div>
 

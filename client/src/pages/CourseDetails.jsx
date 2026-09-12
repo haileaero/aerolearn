@@ -9,6 +9,7 @@ import {
 import { useParams } from "react-router-dom";
 
 import { AuthContext } from "../context/AuthContext";
+import { isStudent } from "../utils/roles";
 import Layout from "../components/Layout";
 import api from "../api";
 import CourseHeader from "../components/course/CourseHeader";
@@ -395,7 +396,7 @@ function CourseDetails() {
           ADMIN & INSTRUCTOR ONLY
       ================================================= */}
 
-      {user?.role !== "Student" &&
+      {!isStudent(user) &&
         activeTab === "students" && (
 
           <StudentsTab
@@ -408,7 +409,7 @@ function CourseDetails() {
           ADMIN & INSTRUCTOR ONLY
       ================================================= */}
 
-      {user?.role !== "Student" &&
+      {!isStudent(user) &&
         activeTab === "statistics" && (
 
           <StatisticsTab
