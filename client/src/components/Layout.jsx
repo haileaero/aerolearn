@@ -3,6 +3,7 @@ import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
+import MobileDock from "./MobileDock";
 
 import {
   useNavigate,
@@ -71,6 +72,7 @@ function Layout({ children }) {
         </main>
 
         <Footer />
+        <MobileDock />
 
       </div>
 

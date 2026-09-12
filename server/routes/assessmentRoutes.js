@@ -9,6 +9,7 @@ import {
   updateScores,
   deleteAssessment,
   getAssessmentStatistics,
+  getMyResults,
 
 } from "../controllers/assessmentController.js";
 
@@ -33,6 +34,18 @@ router.get(
   protect,
 
   getAssessments
+
+);
+
+router.get(
+
+  "/my-results",
+
+  protect,
+
+  authorize("Student"),
+
+  getMyResults
 
 );
 

@@ -1,5 +1,6 @@
 import Assessment from "../models/assessment.js";
 import Course from "../models/course.js";
+import Student from "../models/student.js";
 
 /* ============================================================
    GET ALL ASSESSMENTS
@@ -484,7 +485,134 @@ export const deleteAssessment =
     }
 
   };
-  /* ============================================================
+  
+/* ============================================================
+   GET MY RESULTS (STUDENT)
+============================================================ */
+
+export const getMyResults = async (req, res) => {
+  try {
+    if (req.user?.role !== "Student") {
+      return res.status(403).json({ message: "Student access only." });
+    }
+
+    const student = await Student.findOne({ studentId: req.user.studentId });
+
+    if (!student) {
+      return res.status(404).json({ message: "Student profile not found." });
+    }
+
+    const currentCourses = await Course.find({
+      department: student.department,
+      studyYear: student.year,
+      semester: student.semester,
+      status: "Active",
+    }).select("_id code name department studyYear semester academicYear creditHours status");
+
+    const currentCourseIds = currentCourses.map((course) => course._id);
+
+    if (student.status === "Active" && currentCourseIds.length) {
+      // Repair the student's current course references and course rosters.
+      await Student.updateOne(
+        { _id: student._id },
+        { $addToSet: { courses: { $each: currentCourseIds } } }
+      );
+      await Course.updateMany(
+        { _id: { $in: currentCourseIds } },
+        { $addToSet: { students: student._id } }
+      );
+
+      // Repair score sheets created before enrollment was synchronized.
+      await Assessment.updateMany(
+        {
+          course: { $in: currentCourseIds },
+          "scores.student": { $ne: student._id },
+        },
+        {
+          $push: {
+            scores: {
+              student: student._id,
+              score: 0,
+              entered: false,
+              remark: "",
+            },
+          },
+        }
+      );
+    }
+
+    // Historical assessments remain visible even if the student later moves to
+    // another year/semester. This prevents valid old results from disappearing.
+    const historicalAssessments = await Assessment.find({
+      "scores.student": student._id,
+    })
+      .populate("course", "code name department studyYear semester academicYear creditHours status")
+      .sort({ dueDate: -1, createdAt: -1 });
+
+    const currentAssessments = currentCourseIds.length
+      ? await Assessment.find({ course: { $in: currentCourseIds } })
+          .populate("course", "code name department studyYear semester academicYear creditHours status")
+          .sort({ dueDate: -1, createdAt: -1 })
+      : [];
+
+    const assessmentMap = new Map();
+    for (const assessment of [...historicalAssessments, ...currentAssessments]) {
+      assessmentMap.set(String(assessment._id), assessment);
+    }
+
+    const assessments = [...assessmentMap.values()].map((assessment) => {
+      const scoreRow = (assessment.scores || []).find(
+        (item) => String(item.student) === String(student._id)
+      );
+
+      return {
+        _id: assessment._id,
+        course: assessment.course,
+        title: assessment.title,
+        category: assessment.category,
+        week: assessment.week,
+        dueDate: assessment.dueDate,
+        totalMark: assessment.totalMark,
+        weight: assessment.weight,
+        description: assessment.description,
+        result: scoreRow
+          ? {
+              score: Number(scoreRow.score || 0),
+              entered: scoreRow.entered === true || Number(scoreRow.score) > 0,
+              remark: scoreRow.remark || "",
+            }
+          : { score: 0, entered: false, remark: "" },
+      };
+    });
+
+    const courseMap = new Map();
+    for (const course of currentCourses) {
+      courseMap.set(String(course._id), course);
+    }
+    for (const assessment of assessments) {
+      if (assessment.course?._id) {
+        courseMap.set(String(assessment.course._id), assessment.course);
+      }
+    }
+
+    return res.json({
+      student: {
+        studentId: student.studentId,
+        fullName: student.fullName,
+        year: student.year,
+        semester: student.semester,
+        department: student.department,
+      },
+      courses: [...courseMap.values()],
+      assessments,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Failed to load student results." });
+  }
+};
+
+/* ============================================================
    ASSESSMENT STATISTICS
 ============================================================ */
 

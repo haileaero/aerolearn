@@ -1,5 +1,72 @@
 import Student from "../models/student.js";
 import Course from "../models/course.js";
+import Assessment from "../models/assessment.js";
+
+const activeCourseFilterForStudent = (student) => ({
+  department: student.department,
+  studyYear: student.year,
+  semester: student.semester,
+  status: "Active",
+});
+
+async function reconcileStudentCourses(student) {
+  if (!student || student.status !== "Active") {
+    if (student && Array.isArray(student.courses) && student.courses.length) {
+      await Course.updateMany(
+        { students: student._id },
+        { $pull: { students: student._id } }
+      );
+      student.courses = [];
+      await student.save();
+    }
+    return [];
+  }
+
+  const matchedCourses = await Course.find(activeCourseFilterForStudent(student)).select("_id");
+  const matchedIds = matchedCourses.map((course) => course._id);
+  const currentIds = (student.courses || []).map(String).sort();
+  const nextIds = matchedIds.map(String).sort();
+
+  if (JSON.stringify(currentIds) !== JSON.stringify(nextIds)) {
+    student.courses = matchedIds;
+    await student.save();
+  }
+
+  await Course.updateMany(
+    { students: student._id, _id: { $nin: matchedIds } },
+    { $pull: { students: student._id } }
+  );
+
+  if (matchedIds.length) {
+    await Course.updateMany(
+      { _id: { $in: matchedIds } },
+      { $addToSet: { students: student._id } }
+    );
+
+    // Existing assessments may have been created before this student's course
+    // enrollment was repaired. Add a pending score row without touching any
+    // previously entered score. This keeps My Results and teacher score sheets
+    // aligned with the repaired course roster.
+    await Assessment.updateMany(
+      {
+        course: { $in: matchedIds },
+        "scores.student": { $ne: student._id },
+      },
+      {
+        $push: {
+          scores: {
+            student: student._id,
+            score: 0,
+            entered: false,
+            remark: "",
+          },
+        },
+      }
+    );
+  }
+
+  return matchedIds;
+}
 /* ============================================================
    GET ALL STUDENTS
 ============================================================ */
@@ -142,24 +209,29 @@ export const getStudentProfile = async (req, res) => {
       });
     }
 
-    const student = await Student.findOne({
-  studentId: req.params.studentId,
-})
-  .populate("user", "fullName email studentId department phone role")
-  .populate("advisor", "fullName email")
-  .populate({
-    path: "courses",
-    populate: {
-      path: "instructor",
-      select: "fullName email",
-    },
-  });
+    const studentRecord = await Student.findOne({
+      studentId: req.params.studentId,
+    });
 
-    if (!student) {
+    if (!studentRecord) {
       return res.status(404).json({
         message: "Student profile not found.",
       });
     }
+
+    await reconcileStudentCourses(studentRecord);
+
+    const student = await Student.findById(studentRecord._id)
+      .populate("user", "fullName email studentId department phone role")
+      .populate("advisor", "fullName email")
+      .populate({
+        path: "courses",
+        match: { status: "Active" },
+        populate: {
+          path: "instructor",
+          select: "fullName email",
+        },
+      });
 
     return res.json(student);
   } catch (error) {
@@ -378,11 +450,16 @@ export const updateStudent = async (req, res) => {
     student.advisor =
       req.body.advisor ?? student.advisor;
 
-    if (req.body.courses) {
+    if (Array.isArray(req.body.courses)) {
       student.courses = req.body.courses;
     }
 
     const updatedStudent = await student.save();
+
+    // Keep course enrollment synchronized whenever department, year, semester,
+    // or status changes. This also repairs older student records that were
+    // created before a matching course existed.
+    await reconcileStudentCourses(updatedStudent);
 
     const populatedStudent =
   await Student.findById(updatedStudent._id)
@@ -425,6 +502,10 @@ export const deleteStudent = async (req, res) => {
       });
     }
 
+    await Course.updateMany(
+      { students: student._id },
+      { $pull: { students: student._id } }
+    );
     await student.deleteOne();
 
     return res.json({

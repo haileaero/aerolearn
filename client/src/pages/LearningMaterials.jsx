@@ -216,6 +216,21 @@ function LearningMaterials() {
     }
   }
 
+  const studentCourseIds = useMemo(() => {
+    if (user?.role !== "Student") return null;
+    return new Set(
+      materials
+        .map((material) => material.course && typeof material.course === "object" ? material.course._id : material.course)
+        .filter(Boolean)
+        .map(String)
+    );
+  }, [materials, user?.role]);
+
+  const visibleCourses = useMemo(() => {
+    if (!studentCourseIds) return courses;
+    return courses.filter((course) => studentCourseIds.has(String(course._id)));
+  }, [courses, studentCourseIds]);
+
   const filtered = useMemo(() => {
     return materials.filter((material) => {
       if (categoryFilter !== "All" && material.category !== categoryFilter) return false;
@@ -258,7 +273,7 @@ function LearningMaterials() {
           <div><span className="blue"><FaBook /></span><b>{materials.length}</b><small>Materials</small></div>
           <div><span className="red"><FaVideo /></span><b>{materials.filter((m) => m.category === "Video").length}</b><small>Videos</small></div>
           <div><span className="green"><FaFilePdf /></span><b>{materials.filter((m) => m.category !== "Video").length}</b><small>Documents</small></div>
-          <div><span className="orange"><FaFileAlt /></span><b>{courses.length}</b><small>Courses</small></div>
+          <div><span className="orange"><FaFileAlt /></span><b>{visibleCourses.length}</b><small>Courses</small></div>
         </div>
       {canManageMaterials && showUpload && (
               <div
@@ -426,7 +441,7 @@ function LearningMaterials() {
           </label>
           <select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} aria-label="Filter by course">
             <option value="All">All courses</option>
-            {courses.map((course) => <option key={course._id} value={course._id}>{course.code} — {course.name}</option>)}
+            {visibleCourses.map((course) => <option key={course._id} value={course._id}>{course.code} — {course.name}</option>)}
           </select>
         </div>
 

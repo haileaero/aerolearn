@@ -10,6 +10,7 @@ function MyCourses() {
   const [courses, setCourses] = useState([]);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -19,7 +20,26 @@ function MyCourses() {
         const student = profileRes.data;
         setProfile(student);
 
-        const enrolledCourses = Array.isArray(student.courses) ? student.courses : [];
+        let enrolledCourses = Array.isArray(student.courses) ? student.courses : [];
+
+        // Older student records may predate course auto-enrollment. The backend
+        // now repairs those records, but this fallback keeps the page useful
+        // during rolling deployments as well.
+        if (enrolledCourses.length === 0 && student.department && student.year && student.semester) {
+          try {
+            const eligibleRes = await api.get("/courses", { params: {
+              department: student.department,
+              studyYear: student.year,
+              semester: student.semester,
+              status: "Active",
+              limit: 100,
+            }});
+            enrolledCourses = Array.isArray(eligibleRes.data?.courses) ? eligibleRes.data.courses : [];
+          } catch {
+            enrolledCourses = [];
+          }
+        }
+
         const fullCourses = await Promise.all(
           enrolledCourses.map(async (course) => {
             if (course && typeof course === "object" && course.name) return course;
@@ -33,8 +53,11 @@ function MyCourses() {
           })
         );
         setCourses(fullCourses.filter(Boolean));
+        setLoadError("");
       } catch (err) {
         console.error(err);
+        setCourses([]);
+        setLoadError(err?.response?.data?.message || "Unable to load your assigned courses.");
       } finally {
         setLoading(false);
       }
@@ -83,7 +106,13 @@ function MyCourses() {
           </article>
         </div>
 
-        {loading ? <div className="dashboard-loading">Loading your courses…</div> : <StudentCourses courses={courses} />}
+        {loading ? (
+          <div className="dashboard-loading">Loading your courses…</div>
+        ) : loadError ? (
+          <div className="empty-state"><strong>Could not load your courses</strong><span>{loadError}</span></div>
+        ) : (
+          <StudentCourses courses={courses} />
+        )}
       </div>
     </Layout>
   );

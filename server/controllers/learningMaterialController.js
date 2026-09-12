@@ -1,4 +1,6 @@
 import LearningMaterial from "../models/learningMaterial.js";
+import Student from "../models/student.js";
+import Course from "../models/course.js";
 import cloudinary from "../config/cloudinary.js";
 import { Readable } from "stream";
 import path from "path";
@@ -129,11 +131,41 @@ export const getLearningMaterials = async (
   res
 ) => {
   try {
+    let filter = {};
+
+    if (req.user?.role === "Student") {
+      const student = await Student.findOne({ studentId: req.user.studentId });
+
+      if (!student || student.status !== "Active") {
+        return res.status(200).json([]);
+      }
+
+      const eligibleCourses = await Course.find({
+        department: student.department,
+        studyYear: student.year,
+        semester: student.semester,
+        status: "Active",
+      }).select("_id");
+
+      const courseIds = eligibleCourses.map((course) => course._id);
+      filter = { course: { $in: courseIds } };
+
+      // Repair stale enrollment while the resource library is being loaded.
+      student.courses = courseIds;
+      await student.save();
+      if (courseIds.length) {
+        await Course.updateMany(
+          { _id: { $in: courseIds } },
+          { $addToSet: { students: student._id } }
+        );
+      }
+    }
+
     const learningMaterials =
-      await LearningMaterial.find()
+      await LearningMaterial.find(filter)
         .populate(
           "course",
-          "name title code"
+          "name title code department studyYear semester status"
         )
         .sort({
           createdAt: -1,

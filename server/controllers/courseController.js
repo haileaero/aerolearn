@@ -1,4 +1,35 @@
 import Course from "../models/course.js";
+import Student from "../models/student.js";
+
+const matchingStudentFilterForCourse = (course) => ({
+  department: course.department,
+  year: course.studyYear,
+  semester: course.semester,
+  status: "Active",
+});
+
+async function syncCourseEnrollment(course) {
+  const matchingStudents = await Student.find(
+    matchingStudentFilterForCourse(course)
+  ).select("_id");
+  const studentIds = matchingStudents.map((student) => student._id);
+
+  await Student.updateMany(
+    { courses: course._id, _id: { $nin: studentIds } },
+    { $pull: { courses: course._id } }
+  );
+
+  if (studentIds.length) {
+    await Student.updateMany(
+      { _id: { $in: studentIds } },
+      { $addToSet: { courses: course._id } }
+    );
+  }
+
+  course.students = studentIds;
+  await course.save();
+  return studentIds;
+}
 
 /* ============================================================
    GET ALL COURSES
@@ -12,15 +43,29 @@ export const getCourses = async (req, res) => {
 
     const filter = {};
 
-    if (req.query.department) {
+    // Students should only receive courses that match their current academic
+    // profile. This prevents stale enrollment arrays from making My Courses
+    // appear empty or exposing unrelated course records.
+    if (req.user?.role === "Student") {
+      const student = await Student.findOne({ studentId: req.user.studentId });
+      if (!student || student.status !== "Active") {
+        return res.json({ courses: [], pagination: { page: 1, limit, total: 0, pages: 0 } });
+      }
+      filter.department = student.department;
+      filter.studyYear = student.year;
+      filter.semester = student.semester;
+      filter.status = "Active";
+    }
+
+    if (req.query.department && req.user?.role !== "Student") {
       filter.department = req.query.department;
     }
 
-    if (req.query.semester) {
+    if (req.query.semester && req.user?.role !== "Student") {
       filter.semester = req.query.semester;
     }
 
-    if (req.query.studyYear) {
+    if (req.query.studyYear && req.user?.role !== "Student") {
       filter.studyYear = req.query.studyYear;
     }
 
@@ -28,7 +73,7 @@ export const getCourses = async (req, res) => {
       filter.academicYear = req.query.academicYear;
     }
 
-    if (req.query.status) {
+    if (req.query.status && req.user?.role !== "Student") {
       filter.status = req.query.status;
     }
 
@@ -120,6 +165,24 @@ export const getCourseById = async (req, res) => {
       });
     }
 
+    if (req.user?.role === "Student") {
+      const student = await Student.findOne({ studentId: req.user.studentId });
+      const eligible = student && student.status === "Active" &&
+        String(student.department || "") === String(course.department || "") &&
+        String(student.year || "") === String(course.studyYear || "") &&
+        String(student.semester || "") === String(course.semester || "") &&
+        course.status === "Active";
+
+      if (!eligible) {
+        return res.status(403).json({ message: "This course is not assigned to your current study profile." });
+      }
+
+      if (!(student.courses || []).some((courseId) => String(courseId) === String(course._id))) {
+        await Student.updateOne({ _id: student._id }, { $addToSet: { courses: course._id } });
+        await Course.updateOne({ _id: course._id }, { $addToSet: { students: student._id } });
+      }
+    }
+
     return res.json(course);
 
   } catch (error) {
@@ -207,6 +270,8 @@ export const createCourse = async (req, res) => {
       schedule,
 
     });
+
+    await syncCourseEnrollment(course);
 
     const populatedCourse =
       await Course.findById(course._id)
@@ -339,6 +404,8 @@ export const updateCourse = async (req, res) => {
     const updatedCourse =
       await course.save();
 
+    await syncCourseEnrollment(updatedCourse);
+
     const populatedCourse =
       await Course.findById(
         updatedCourse._id
@@ -404,6 +471,10 @@ export const deleteCourse = async (
 
     }
 
+    await Student.updateMany(
+      { courses: course._id },
+      { $pull: { courses: course._id } }
+    );
     await course.deleteOne();
 
     return res.json({

@@ -15,6 +15,7 @@ import "./styles/global.css";
 import "./styles/layout.css";
 import "./styles/professional.css";
 import "./styles/mobile-shell.css";
+import "./styles/v5-premium.css";
 
 /* ===========================
    Render Application
