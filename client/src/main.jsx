@@ -14,6 +14,7 @@ import "./styles/variables.css";
 import "./styles/global.css";
 import "./styles/layout.css";
 import "./styles/professional.css";
+import "./styles/mobile-shell.css";
 
 /* ===========================
    Render Application

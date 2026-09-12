@@ -24,6 +24,11 @@ import {
   FaPen,
   FaTrash,
   FaExternalLinkAlt,
+  FaFolderOpen,
+  FaPlay,
+  FaClock,
+  FaLayerGroup,
+  FaArrowRight,
 } from "react-icons/fa";
 
 import { getCourses } from "../services/courseService";
@@ -68,6 +73,7 @@ function LearningMaterials() {
 
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [courseFilter, setCourseFilter] = useState("All");
   const [showUpload, setShowUpload] = useState(false);
 
   const [form, setForm] = useState({
@@ -213,6 +219,8 @@ function LearningMaterials() {
   const filtered = useMemo(() => {
     return materials.filter((material) => {
       if (categoryFilter !== "All" && material.category !== categoryFilter) return false;
+      const materialCourseId = material.course && typeof material.course === "object" ? material.course._id : material.course;
+      if (courseFilter !== "All" && materialCourseId !== courseFilter) return false;
       return (
         (material.title || "")
           .toLowerCase()
@@ -232,7 +240,7 @@ function LearningMaterials() {
           .includes(search.toLowerCase())
       );
     });
-  }, [materials, search, categoryFilter]);
+  }, [materials, search, categoryFilter, courseFilter]);
 
   return (
     <Layout>
@@ -397,201 +405,90 @@ function LearningMaterials() {
 
       )}
 
-      <div className="resource-filter-bar">
-        <span>Filter</span>
-        {["All","Lecture Note","Assignment","Exercise","Slides","Video","Other"].map((category) => <button key={category} className={categoryFilter === category ? "active" : ""} onClick={() => setCategoryFilter(category)}>{category}</button>)}
-      </div>
-
-      <div
-        style={{
-          position: "relative",
-          marginBottom: "30px",
-        }}
-      >
-        <FaSearch
-          style={{
-            position: "absolute",
-            left: "18px",
-            top: "16px",
-            color: "#64748b",
-          }}
-        />
-
-        <input
-          placeholder="Search materials..."
-          value={search}
-          onChange={(e) =>
-            setSearch(e.target.value)
-          }
-          style={{
-            width: "100%",
-            padding:
-              "14px 18px 14px 50px",
-            borderRadius: "12px",
-            border: "1px solid #d1d5db",
-            fontSize: "15px",
-          }}
-        />
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit,minmax(300px,1fr))",
-          gap: "14px",
-        }}
-      >
-        {filtered.map((material) => (
-          <div
-            key={material._id}
-            onClick={() =>
-              navigate(
-                `/course/${
-                  material.course && typeof material.course ===
-                  "object"
-                    ? material.course._id
-                    : material.course
-                }`
-              )
-            }
-            style={{
-              background: "#fff",
-              borderRadius: "20px",
-              padding: "16px",
-              boxShadow:
-                "0 10px 25px rgba(15,23,42,.06)",
-              cursor: "pointer",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent:
-                  "space-between",
-                alignItems: "center",
-                marginBottom: "15px",
-              }}
-            >
-              <h2>{material.title}</h2>
-
-              <span
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "20px",
-                  background:
-                    material.category ===
-                    "Video"
-                      ? "#dc2626"
-                      : "#2563eb",
-                  color: "#fff",
-                }}
-              >
-                {material.category}
-              </span>
-            </div>
-
-            <p>
-              <strong>Course:</strong>{" "}
-              {material.course && typeof material.course ===
-              "object"
-                ? `${material.course.code || "Course"} - ${material.course.name || "Unavailable"}`
-                : material.course || "Course unavailable"}
-            </p>
-
-            <p>{material.description}</p>
-
-            {material.category ===
-              "Video" &&
-              getYoutubeEmbed(
-                material.file
-              ) && (
-                <iframe
-                  width="100%"
-                  height="220"
-                  src={getYoutubeEmbed(
-                    material.file
-                  )}
-                  title="Video"
-                  frameBorder="0"
-                  allowFullScreen
-                  onClick={(e) =>
-                    e.stopPropagation()
-                  }
-                />
-              )}
-
-            {material.category !==
-              "Video" &&
-              material.file && (
-               <a
-  href={material.file}
-  target="_blank"
-  rel="noopener noreferrer"
-  onClick={(e) =>
-    e.stopPropagation()
-  }
- className="material-open-link">
-  <FaExternalLinkAlt /> Open file
-</a>
-              )}
-
-            {(material.category ===
-              "Assignment" ||
-              material.category ===
-                "Exercise") &&
-              material.dueDate && (
-                <p
-                  style={{
-                    color: "#dc2626",
-                    fontWeight: "bold",
-                  }}
-                >
-                  Due:{" "}
-                  {new Date(
-                    material.dueDate
-                  ).toLocaleDateString()}
-                </p>
-              )}
-
-            {canManageMaterials && (
-              <div
-                style={{
-                  display: "flex",
-                  gap: "12px",
-                  marginTop: "20px",
-                }}
-              >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    edit(material);
-                  }}
-                  className="al-row-text-btn edit"
-                >
-                  <FaPen /> Edit
-                </button>
-
-                <button
-                  className="al-row-text-btn delete"
-                  onClick={async (
-                    e
-                  ) => {
-                    e.stopPropagation();
-                    await remove(
-                      material._id
-                    );
-                  }}
-                >
-                  <FaTrash /> Delete
-                </button>
-              </div>
-            )}
-
+      <section className="resource-studio">
+        <div className="resource-studio-head">
+          <div>
+            <span className="al-eyebrow">RESOURCE DISCOVERY</span>
+            <h2>Your learning library</h2>
+            <p>Find the right note, assignment, presentation or video without digging through oversized cards.</p>
           </div>
-        ))}
-      </div>
+          <div className="resource-studio-count"><FaLayerGroup /><strong>{filtered.length}</strong><span>showing</span></div>
+        </div>
 
+        <div className="resource-command-bar">
+          <label className="resource-search-box">
+            <FaSearch />
+            <input
+              placeholder="Search by title, course or type..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </label>
+          <select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} aria-label="Filter by course">
+            <option value="All">All courses</option>
+            {courses.map((course) => <option key={course._id} value={course._id}>{course.code} — {course.name}</option>)}
+          </select>
+        </div>
+
+        <div className="resource-filter-bar resource-filter-polished">
+          <span>Type</span>
+          {["All","Lecture Note","Assignment","Exercise","Slides","Video","Other"].map((category) => (
+            <button key={category} className={categoryFilter === category ? "active" : ""} onClick={() => setCategoryFilter(category)}>{category}</button>
+          ))}
+        </div>
+
+        {filtered.length ? (
+          <div className="resource-showcase-grid">
+            {filtered.map((material) => {
+              const course = material.course && typeof material.course === "object" ? material.course : null;
+              const embedUrl = material.category === "Video" ? getYoutubeEmbed(material.file) : "";
+              const tone = material.category === "Video" ? "video" : material.category === "Assignment" ? "assignment" : material.category === "Exercise" ? "exercise" : material.category === "Slides" ? "slides" : "document";
+              const Icon = material.category === "Video" ? FaPlay : material.category === "Slides" ? FaLayerGroup : material.category === "Assignment" || material.category === "Exercise" ? FaFileAlt : FaBook;
+              return (
+                <article
+                  key={material._id}
+                  className={`resource-showcase-card ${tone}`}
+                  onClick={() => navigate(`/course/${course?._id || material.course || ""}`)}
+                >
+                  <div className="resource-showcase-media">
+                    {embedUrl ? (
+                      <iframe src={embedUrl} title={material.title} frameBorder="0" allowFullScreen onClick={(e) => e.stopPropagation()} />
+                    ) : (
+                      <div className="resource-file-visual"><span><Icon /></span><small>{material.category || "Resource"}</small></div>
+                    )}
+                    <span className={`resource-type-badge ${tone}`}>{material.category || "Resource"}</span>
+                  </div>
+
+                  <div className="resource-showcase-body">
+                    <div className="resource-course-line"><FaFolderOpen /><span>{course ? `${course.code} · ${course.name}` : "Course resource"}</span></div>
+                    <h3>{material.title}</h3>
+                    <p>{material.description || "Learning resource shared for this course."}</p>
+                    {(material.category === "Assignment" || material.category === "Exercise") && material.dueDate && (
+                      <div className="resource-due"><FaClock /> Due {new Date(material.dueDate).toLocaleDateString()}</div>
+                    )}
+                  </div>
+
+                  <div className="resource-showcase-footer">
+                    {material.category !== "Video" && material.file ? (
+                      <a href={material.file} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="resource-open-primary"><FaExternalLinkAlt /> Open resource</a>
+                    ) : (
+                      <button className="resource-course-link" onClick={(e) => { e.stopPropagation(); navigate(`/course/${course?._id || material.course || ""}`); }}>Course workspace <FaArrowRight /></button>
+                    )}
+                    {canManageMaterials && (
+                      <div className="resource-admin-actions">
+                        <button onClick={(e) => { e.stopPropagation(); edit(material); }} className="al-row-text-btn edit"><FaPen /></button>
+                        <button onClick={async (e) => { e.stopPropagation(); await remove(material._id); }} className="al-row-text-btn delete"><FaTrash /></button>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="resource-empty-state"><FaFolderOpen /><h3>No resources found</h3><p>Try another search, course, or resource type.</p></div>
+        )}
+      </section>
       </div>
     </Layout>
   );

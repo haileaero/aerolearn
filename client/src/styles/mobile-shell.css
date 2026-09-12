@@ -1,0 +1,502 @@
+/* ==========================================================
+   AeroLearn 4.3 — Mobile Shell & Responsive Workspace
+   Loaded last so the responsive shell wins over legacy rules.
+========================================================== */
+
+/* Mobile/tablet shell is intentionally enabled up to 1100px.
+   Some Android in-app browsers expose a ~980px CSS viewport even
+   on a phone; the older 768px breakpoint therefore never fired. */
+@media (max-width: 1100px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    overscroll-behavior: none;
+  }
+
+  .layout {
+    width: 100%;
+    min-width: 0;
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* ---------- Off-canvas navigation ---------- */
+  .sidebar {
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    width: min(86vw, 310px) !important;
+    min-width: 0 !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    padding: 16px 14px 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    overflow: hidden !important;
+    z-index: 1300 !important;
+    transform: translate3d(-104%, 0, 0) !important;
+    transition: transform .24s ease !important;
+    box-shadow: 18px 0 50px rgba(4, 13, 33, .28) !important;
+  }
+
+  .sidebar.sidebar-open {
+    transform: translate3d(0, 0, 0) !important;
+  }
+
+  .sidebar-overlay {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 1250 !important;
+    background: rgba(4, 13, 33, .58) !important;
+    backdrop-filter: blur(3px);
+  }
+
+  .sidebar-brand {
+    flex: 0 0 auto;
+    margin: 0 0 8px !important;
+    padding: 2px 42px 14px 4px !important;
+  }
+
+  .sidebar-brand-mark {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 13px !important;
+    font-size: 18px !important;
+  }
+
+  .sidebar-brand-copy strong {
+    font-size: 18px !important;
+  }
+
+  .sidebar-brand-copy span {
+    margin-top: 3px !important;
+    font-size: 8px !important;
+  }
+
+  .sidebar-close {
+    display: grid !important;
+    place-items: center !important;
+    position: absolute !important;
+    top: 15px !important;
+    right: 13px !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 !important;
+    border: 1px solid rgba(255,255,255,.10) !important;
+    border-radius: 10px !important;
+    background: rgba(255,255,255,.08) !important;
+    color: #fff !important;
+    box-shadow: none !important;
+  }
+
+  .sidebar-nav {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 2px 2px 12px 0 !important;
+    gap: 2px !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148,163,184,.36) transparent;
+  }
+
+  .sidebar-title {
+    margin: 13px 9px 5px !important;
+    font-size: 8.5px !important;
+    letter-spacing: 1.35px !important;
+  }
+
+  .sidebar-nav > a,
+  .assessment-toggle {
+    min-height: 42px !important;
+    padding: 0 11px !important;
+    border-radius: 11px !important;
+    gap: 10px !important;
+    font-size: 12.5px !important;
+  }
+
+  .sidebar-nav > a svg,
+  .assessment-toggle svg {
+    min-width: 17px !important;
+    font-size: 15px !important;
+  }
+
+  .sidebar-user {
+    position: relative !important;
+    flex: 0 0 auto !important;
+    margin: 8px 0 0 !important;
+    padding: 11px !important;
+    border-radius: 13px !important;
+    background: rgba(255,255,255,.06) !important;
+    box-shadow: 0 -14px 28px rgba(5,13,31,.16) !important;
+  }
+
+  .sidebar-user strong {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px !important;
+  }
+
+  .sidebar-user small {
+    margin: 2px 0 8px !important;
+    font-size: 10px !important;
+  }
+
+  .sidebar-user .logout-btn {
+    width: 100% !important;
+    min-height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 7px 10px !important;
+    border-radius: 10px !important;
+    font-size: 11px !important;
+    box-shadow: none !important;
+  }
+
+  /* ---------- Main application ---------- */
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  .mobile-menu-button {
+    display: grid !important;
+    place-items: center !important;
+    position: fixed !important;
+    top: 12px !important;
+    left: 12px !important;
+    z-index: 1150 !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    border: 1px solid #dce5f2 !important;
+    border-radius: 12px !important;
+    background: rgba(255,255,255,.97) !important;
+    color: #123162 !important;
+    box-shadow: 0 7px 20px rgba(15,23,42,.11) !important;
+  }
+
+  .navbar {
+    min-height: 64px !important;
+    height: 64px !important;
+    flex: 0 0 64px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    padding: 9px 12px 9px 62px !important;
+    background: rgba(255,255,255,.97) !important;
+  }
+
+  .navbar-brand-group {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    gap: 10px !important;
+  }
+
+  .navbar-brand-copy {
+    display: block !important;
+    min-width: 0 !important;
+  }
+
+  .navbar-eyebrow {
+    display: none !important;
+  }
+
+  .navbar-brand-copy h2 {
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px !important;
+    letter-spacing: -.25px !important;
+  }
+
+  .navbar-search {
+    display: none !important;
+  }
+
+  .navbar-actions {
+    flex: 0 0 auto !important;
+    gap: 6px !important;
+  }
+
+  .navbar-icon-button {
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 0 !important;
+  }
+
+  .navbar-profile {
+    gap: 0 !important;
+  }
+
+  .navbar-profile img {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .navbar-profile-copy {
+    display: none !important;
+  }
+
+  /* ---------- Content rhythm ---------- */
+  .page-content {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 12px 22px !important;
+    scroll-padding-top: 12px;
+  }
+
+  .page-back-button {
+    width: auto !important;
+    min-height: 32px !important;
+    margin-bottom: 9px !important;
+  }
+
+  .page-content button:not(.mobile-menu-button) {
+    width: auto;
+    max-width: 100%;
+  }
+
+  .footer {
+    flex: 0 0 auto !important;
+    min-height: 46px !important;
+    height: auto !important;
+    padding: 9px 12px !important;
+    font-size: 9px !important;
+    text-align: center !important;
+  }
+
+  /* ---------- Generic responsive grids ---------- */
+  .grid-2,
+  .grid-3,
+  .grid-4,
+  .grid-auto,
+  .dashboard-grid,
+  .dashboard-stats,
+  .dashboard-main-grid,
+  .dashboard-health-grid,
+  .student-course-grid,
+  .al-mini-stats,
+  .resource-stats,
+  .resource-grid,
+  .course-brief-grid,
+  .course-metric-grid,
+  .profile-grid,
+  .assessment-stats,
+  .attendance-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .dashboard-hero,
+  .course-showcase-hero,
+  .course-workspace-hero,
+  .profile-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Forms should not force desktop widths */
+  .page-content form:not(.login-form),
+  .course-form,
+  .student-form,
+  .attendance-form,
+  .grade-form,
+  .video-form,
+  .note-form,
+  .announcement-form {
+    width: 100% !important;
+    max-width: 100% !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .page-content input,
+  .page-content select,
+  .page-content textarea,
+  .al-compact-select {
+    max-width: 100% !important;
+  }
+
+  /* Toolbars wrap instead of overflowing */
+  .al-toolbar,
+  .resource-toolbar,
+  .ops-toolbar,
+  .assessment-toolbar,
+  .attendance-toolbar,
+  .filter-row,
+  .filter-group,
+  .resource-filter-row {
+    flex-wrap: wrap !important;
+    min-width: 0 !important;
+  }
+
+  .al-searchbox,
+  .resource-search {
+    min-width: min(100%, 220px) !important;
+  }
+
+  /* Keep data tables usable with deliberate horizontal scroll */
+  .al-table-shell,
+  .table-container,
+  .table-wrapper,
+  .attendance-table-wrap,
+  .assessment-table-wrap {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .page-content table {
+    width: 100%;
+  }
+
+  /* Cards and long copy must never create a wider viewport */
+  .page-content img,
+  .page-content video,
+  .page-content iframe {
+    max-width: 100% !important;
+  }
+
+  .page-content p,
+  .page-content h1,
+  .page-content h2,
+  .page-content h3,
+  .page-content h4,
+  .page-content td,
+  .page-content th,
+  .page-content a,
+  .page-content span {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 680px) {
+  .page-content {
+    padding: 12px 10px 20px !important;
+  }
+
+  .navbar {
+    padding-right: 9px !important;
+  }
+
+  .navbar-brand-copy h2 {
+    max-width: 38vw;
+    font-size: 15px !important;
+  }
+
+  .grid-2,
+  .grid-3,
+  .grid-4,
+  .grid-auto,
+  .dashboard-grid,
+  .dashboard-stats,
+  .dashboard-main-grid,
+  .dashboard-health-grid,
+  .student-course-grid,
+  .al-mini-stats,
+  .resource-stats,
+  .resource-grid,
+  .course-brief-grid,
+  .course-metric-grid,
+  .profile-grid,
+  .assessment-stats,
+  .attendance-stats,
+  .page-content form:not(.login-form),
+  .course-form,
+  .student-form,
+  .attendance-form,
+  .grade-form,
+  .video-form,
+  .note-form,
+  .announcement-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dashboard-hero {
+    padding: 19px 16px !important;
+    border-radius: 17px !important;
+  }
+
+  .dashboard-hero h1,
+  .page-title,
+  .page-content > h1 {
+    font-size: 22px !important;
+    line-height: 1.15 !important;
+  }
+
+  .al-toolbar,
+  .resource-toolbar,
+  .ops-toolbar,
+  .assessment-toolbar,
+  .attendance-toolbar {
+    align-items: stretch !important;
+  }
+
+  .al-toolbar > *,
+  .resource-toolbar > *,
+  .ops-toolbar > *,
+  .assessment-toolbar > *,
+  .attendance-toolbar > * {
+    max-width: 100% !important;
+  }
+
+  .al-searchbox,
+  .resource-search,
+  .al-compact-select {
+    width: 100% !important;
+  }
+
+  .footer > div:last-child {
+    margin-top: 4px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .sidebar {
+    width: min(90vw, 292px) !important;
+  }
+
+  .navbar-brand-copy h2 {
+    max-width: 34vw;
+    font-size: 14px !important;
+  }
+
+  .navbar-icon-button {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+  }
+
+  .navbar-profile img {
+    width: 36px !important;
+    height: 36px !important;
+  }
+}
