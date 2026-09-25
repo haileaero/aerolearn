@@ -83,3 +83,14 @@
 /* AeroLearn 3.1 assessment resilience */
 .assessment-name-cell small{display:block;color:#64748b;margin-top:2px}
 .onepage-plan-table tr.selected td:first-child{box-shadow:inset 3px 0 0 #2563eb}
+
+/* v5.2 assessment creation reliability */
+.create-onepage-grid{grid-template-columns:minmax(240px,1.6fr) repeat(3,minmax(105px,.7fr));}
+.create-onepage-grid .note-field{grid-column:span 2;}
+.assessment-create-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid #e8edf4;}
+.assessment-create-actions>span{font-size:10px;color:#64748b;font-weight:600;}
+.assessment-create-actions .create-onepage-submit{min-width:150px;padding:0 16px;background:#2563eb;box-shadow:0 6px 14px rgba(37,99,235,.18);}
+.assessment-create-actions .create-onepage-submit:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;}
+@media(max-width:1200px){.create-onepage-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.create-onepage-grid .course-field,.create-onepage-grid .note-field{grid-column:span 2}}
+@media(max-width:800px){.create-onepage-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.create-onepage-grid .course-field,.create-onepage-grid .note-field{grid-column:1/-1}.assessment-create-actions{align-items:stretch;flex-direction:column}.assessment-create-actions .create-onepage-submit{width:100%;min-height:40px}}
+@media(max-width:560px){.create-onepage-grid{grid-template-columns:1fr}.create-onepage-grid .course-field,.create-onepage-grid .note-field{grid-column:auto}}

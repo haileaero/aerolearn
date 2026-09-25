@@ -125,36 +125,50 @@ export const createAssessment =
 
       } = req.body;
 
-      const selectedCourse =
-        await Course.findById(
-          course
-        ).populate(
-          "students"
-        );
+      const selectedCourse = await Course.findById(course);
 
       if (!selectedCourse) {
-
-        return res.status(404).json({
-
-          message:
-            "Course not found.",
-
-        });
-
+        return res.status(404).json({ message: "Course not found." });
       }
 
-      if (
-        selectedCourse.students.length === 0
-      ) {
+      // Enrollment can exist on either side in older AeroLearn records.
+      // Reconcile both Course.students and Student.courses before building the
+      // score sheet so Admin/Instructor do not get a false “no students” error.
+      const matchingStudents = await Student.find({
+        department: selectedCourse.department,
+        year: selectedCourse.studyYear,
+        semester: selectedCourse.semester,
+        status: "Active",
+      }).select("_id");
 
+      const explicitlyLinked = await Student.find({
+        $or: [
+          { _id: { $in: selectedCourse.students || [] } },
+          { courses: selectedCourse._id },
+        ],
+        status: "Active",
+      }).select("_id");
+
+      const enrolledMap = new Map();
+      for (const student of [...matchingStudents, ...explicitlyLinked]) {
+        enrolledMap.set(String(student._id), student._id);
+      }
+      const enrolledStudentIds = [...enrolledMap.values()];
+
+      if (enrolledStudentIds.length === 0) {
         return res.status(400).json({
-
-          message:
-            "This course has no enrolled students.",
-
+          message: "No active students match this course yet. Check the students’ department, year and semester, then try again.",
         });
-
       }
+
+      await Course.updateOne(
+        { _id: selectedCourse._id },
+        { $addToSet: { students: { $each: enrolledStudentIds } } }
+      );
+      await Student.updateMany(
+        { _id: { $in: enrolledStudentIds } },
+        { $addToSet: { courses: selectedCourse._id } }
+      );
 
       const existingAssessment =
         await Assessment.findOne({
@@ -178,12 +192,10 @@ export const createAssessment =
 
       }
 
-      const scores =
-        selectedCourse.students.map(
-          (student) => ({
+      const scores = enrolledStudentIds.map(
+          (studentId) => ({
 
-            student:
-              student._id,
+            student: studentId,
 
             score: 0,
 

@@ -140,6 +140,7 @@ function Assessment() {
       }
     } catch (err) {
       setError(err.response?.data?.message || "Unable to create assessment.");
+      toast(err.response?.data?.message || "Unable to create assessment.", "error");
     } finally {
       setSaving(false);
     }
@@ -303,7 +304,10 @@ function Assessment() {
                 <div className="field"><label>Due date</label><input type="date" name="dueDate" value={form.dueDate} onChange={handleChange} required /></div>
                 <div className="field"><label>Contribution</label><div className="weight-input-wrap"><input type="number" name="weight" min="1" max="100" value={form.weight} onChange={handleChange} required /><span>%</span></div></div>
                 <div className="field note-field"><label>Optional note</label><input name="description" value={form.description} onChange={handleChange} placeholder="Instructions or short description" /></div>
-                <button type="submit" className="create-onepage-submit" disabled={saving}><FaPlus /> {saving ? "Creating…" : "Create"}</button>
+              </div>
+              <div className="assessment-create-actions">
+                <span>{form.course ? "Ready to create a score sheet for the enrolled class." : "Select a course to continue."}</span>
+                <button type="submit" className="create-onepage-submit" disabled={saving || !form.course || !form.title || !form.dueDate}><FaSave /> {saving ? "Saving assessment…" : "Save assessment"}</button>
               </div>
               {form.course && (
                 <div className={`contribution-preview ${formCourseWeight + Number(form.weight || 0) > 100 ? "over" : formCourseWeight + Number(form.weight || 0) === 100 ? "complete" : ""}`}>
