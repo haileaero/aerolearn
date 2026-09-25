@@ -306,7 +306,7 @@ function Assessment() {
                 <div className="field note-field"><label>Optional note</label><input name="description" value={form.description} onChange={handleChange} placeholder="Instructions or short description" /></div>
               </div>
               <div className="assessment-create-actions">
-                <span>{form.course ? "Ready to create a score sheet for the enrolled class." : "Select a course to continue."}</span>
+                <span>{form.course ? "Ready to create this assessment. Student enrollment is not required." : "Select a course to continue."}</span>
                 <button type="submit" className="create-onepage-submit" disabled={saving || !form.course || !form.title || !form.dueDate}><FaSave /> {saving ? "Saving assessment…" : "Save assessment"}</button>
               </div>
               {form.course && (

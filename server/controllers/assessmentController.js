@@ -155,20 +155,20 @@ export const createAssessment =
       }
       const enrolledStudentIds = [...enrolledMap.values()];
 
-      if (enrolledStudentIds.length === 0) {
-        return res.status(400).json({
-          message: "No active students match this course yet. Check the students’ department, year and semester, then try again.",
-        });
+      // Assessment creation is course-level and must not depend on enrollment.
+      // If students are already available, keep the existing relationships in sync;
+      // otherwise create the assessment with an empty score sheet. Students can be
+      // attached later without blocking Admin/Instructor from preparing assessments.
+      if (enrolledStudentIds.length > 0) {
+        await Course.updateOne(
+          { _id: selectedCourse._id },
+          { $addToSet: { students: { $each: enrolledStudentIds } } }
+        );
+        await Student.updateMany(
+          { _id: { $in: enrolledStudentIds } },
+          { $addToSet: { courses: selectedCourse._id } }
+        );
       }
-
-      await Course.updateOne(
-        { _id: selectedCourse._id },
-        { $addToSet: { students: { $each: enrolledStudentIds } } }
-      );
-      await Student.updateMany(
-        { _id: { $in: enrolledStudentIds } },
-        { $addToSet: { courses: selectedCourse._id } }
-      );
 
       const existingAssessment =
         await Assessment.findOne({
