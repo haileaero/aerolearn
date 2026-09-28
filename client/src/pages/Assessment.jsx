@@ -132,7 +132,7 @@ function Assessment() {
       setSaving(true);
       setError("");
       setMessage("");
-      const response = await api.post("/assessment", { ...form, totalMark: 100 });
+      const response = await api.post("/assessment", { ...form, totalMark: Number(form.weight) });
       setMessage("Assessment created and ready for score entry.");
       setForm(initialForm);
       setShowCreate(false);
@@ -249,7 +249,8 @@ function Assessment() {
   const updateScore = (index, value) => {
     if (value !== "") {
       const numeric = Number(value);
-      if (numeric < 0 || numeric > 100) return;
+      const maxScore = Number(selectedAssessment?.weight) || 0;
+      if (numeric < 0 || numeric > maxScore) return;
     }
     setScores((prev) => prev.map((item, itemIndex) =>
       itemIndex === index ? { ...item, score: value, entered: value !== "" } : item
@@ -289,8 +290,9 @@ function Assessment() {
   const classAverage = enteredRows.length
     ? enteredRows.reduce((sum, item) => sum + (Number(item.score) || 0), 0) / enteredRows.length
     : 0;
-  const passCount = enteredRows.filter((item) => Number(item.score) >= 50).length;
-  const weightedAverage = selectedAssessment ? classAverage * (Number(selectedAssessment.weight) || 0) / 100 : 0;
+  const assessmentMax = Number(selectedAssessment?.weight) || 0;
+  const passMark = assessmentMax / 2;
+  const passCount = enteredRows.filter((item) => Number(item.score) >= passMark).length;
 
   return (
     <Layout>
@@ -415,34 +417,34 @@ function Assessment() {
               <div className="desk-kpis">
                 <div><span><FaUsers /></span><strong>{scores.length}</strong><small>Students</small></div>
                 <div><span><FaCheckCircle /></span><strong>{enteredRows.length}</strong><small>Entered</small></div>
-                <div><span>%</span><strong>{classAverage.toFixed(1)}</strong><small>Class average</small></div>
+                <div><span>✓</span><strong>{classAverage.toFixed(1)} / {assessmentMax}</strong><small>Score</small></div>
                 <div><span><FaChartBar /></span><strong>{deskTab === "results" ? passCount : `${Math.max(scores.length - enteredRows.length, 0)}`}</strong><small>{deskTab === "results" ? "Passed" : "Remaining"}</small></div>
               </div>
 
               {deskTab === "scores" ? (
                 <div className="desk-body">
                   <div className="desk-toolbar">
-                    <div><strong>Score sheet</strong><span>Enter percentages from 0 to 100. A real zero is recorded correctly.</span></div>
+                    <div><strong>Score sheet</strong><span>Enter weighted points from 0 to the assessment maximum. A real zero is recorded correctly.</span></div>
                     <div className="desk-search"><FaSearch /><input value={scoreSearch} onChange={(e) => setScoreSearch(e.target.value)} placeholder="Search student or ID" /></div>
                   </div>
                   <div className="score-table-wrap">
                     <table className="score-entry-table">
-                      <thead><tr><th>#</th><th>Student ID</th><th>Student</th><th>Score (%)</th><th>Status</th></tr></thead>
-                      <tbody>{scoreRows.map((item, index) => <tr key={item.student || index}><td>{index + 1}</td><td><span className="table-id">{item.studentData?.studentId || "—"}</span></td><td><strong>{item.studentData?.fullName || "Student record unavailable"}</strong></td><td><div className="score-input-wrap"><input type="number" min="0" max="100" step="0.1" value={item.score} onChange={(e) => updateScore(item.sourceIndex, e.target.value)} placeholder="—" /><span>%</span></div></td><td>{item.entered ? <span className="pill pill-green">Entered</span> : <span className="pill pill-amber">Pending</span>}</td></tr>)}</tbody>
+                      <thead><tr><th>#</th><th>Student ID</th><th>Student</th><th>Score</th><th>Status</th></tr></thead>
+                      <tbody>{scoreRows.map((item, index) => <tr key={item.student || index}><td>{index + 1}</td><td><span className="table-id">{item.studentData?.studentId || "—"}</span></td><td><strong>{item.studentData?.fullName || "Student record unavailable"}</strong></td><td><div className="score-input-wrap"><input type="number" min="0" max={assessmentMax} step="0.1" value={item.score} onChange={(e) => updateScore(item.sourceIndex, e.target.value)} placeholder="—" /><span>/ {assessmentMax}</span></div></td><td>{item.entered ? <span className="pill pill-green">Entered</span> : <span className="pill pill-amber">Pending</span>}</td></tr>)}</tbody>
                     </table>
                   </div>
                   <div className="desk-save-bar"><span>{enteredRows.length} of {scores.length} scores entered</span><button onClick={saveScores} disabled={saving}><FaSave /> {saving ? "Saving…" : "Save scores"}</button></div>
                 </div>
               ) : (
                 <div className="desk-body results-body">
-                  <div className="results-summary-line"><div><strong>{classAverage.toFixed(1)}%</strong><span>Class average</span></div><div><strong>{passCount}</strong><span>Passed</span></div><div><strong>{Math.max(enteredRows.length - passCount, 0)}</strong><span>Below 50%</span></div><div><strong>{weightedAverage.toFixed(1)}</strong><span>Average contribution</span></div></div>
+                  <div className="results-summary-line"><div><strong>{classAverage.toFixed(1)} / {assessmentMax}</strong><span>Score</span></div><div><strong>{passCount}</strong><span>Passed</span></div><div><strong>{Math.max(enteredRows.length - passCount, 0)}</strong><span>Below half mark</span></div><div><strong>{assessmentMax}</strong><span>Maximum score</span></div></div>
                   <div className="score-table-wrap">
                     <table className="score-entry-table results-onepage-table">
                       <thead><tr><th>#</th><th>Student ID</th><th>Student</th><th>Score</th><th>Contribution</th><th>Result</th></tr></thead>
                       <tbody>{scores.map((item, index) => {
                         const score = Number(item.score) || 0;
-                        const contribution = selectedAssessment ? score * (Number(selectedAssessment.weight) || 0) / 100 : 0;
-                        return <tr key={item.student || index}><td>{index + 1}</td><td><span className="table-id">{item.studentData?.studentId || "—"}</span></td><td><strong>{item.studentData?.fullName || "Student record unavailable"}</strong></td><td>{item.entered ? `${score.toFixed(1)}%` : "—"}</td><td>{item.entered ? `${contribution.toFixed(1)} / ${selectedAssessment.weight}` : "—"}</td><td>{!item.entered ? <span className="pill pill-amber">Pending</span> : score >= 50 ? <span className="pill pill-green">Pass</span> : <span className="pill pill-red">Below 50%</span>}</td></tr>;
+                        const contribution = score;
+                        return <tr key={item.student || index}><td>{index + 1}</td><td><span className="table-id">{item.studentData?.studentId || "—"}</span></td><td><strong>{item.studentData?.fullName || "Student record unavailable"}</strong></td><td>{item.entered ? `${score.toFixed(1)} / ${assessmentMax}` : "—"}</td><td>{item.entered ? `${contribution.toFixed(1)} / ${assessmentMax}` : "—"}</td><td>{!item.entered ? <span className="pill pill-amber">Pending</span> : score >= passMark ? <span className="pill pill-green">Pass</span> : <span className="pill pill-red">Below half mark</span>}</td></tr>;
                       })}</tbody>
                     </table>
                   </div>

@@ -75,7 +75,7 @@ function MyResults() {
       courseResults.map((assessment) => {
         const entered = assessment?.result?.entered === true;
         const score = Number(assessment?.result?.score || 0);
-        const total = Number(assessment?.totalMark || 100);
+        const total = Number(assessment?.weight || assessment?.totalMark || 0);
         const percentage = entered && total ? Math.round((score / total) * 100) : null;
         return { assessment, entered, score, total, percentage };
       }),
@@ -84,12 +84,11 @@ function MyResults() {
 
   const publishedRows = rows.filter((row) => row.entered);
   const completed = publishedRows.length;
-  const average = completed
-    ? Math.round(
-        publishedRows.reduce((sum, row) => sum + Number(row.percentage || 0), 0) /
-          completed
-      )
-    : 0;
+  // Assessment scores are already weighted points. When course weights total 100,
+  // their sum is the student's final course percentage.
+  const average = Math.round(
+    publishedRows.reduce((sum, row) => sum + Number(row.score || 0), 0)
+  );
   const passed = publishedRows.filter((row) => Number(row.percentage) >= 50).length;
   const pending = rows.length - completed;
 

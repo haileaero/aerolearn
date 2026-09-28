@@ -170,12 +170,12 @@ assessmentSchema.pre(
 
       if (
         item.score >
-        this.totalMark
+        this.weight
       ) {
 
         return next(
           new Error(
-            `Score cannot exceed ${this.totalMark}.`
+            `Score cannot exceed the assessment weight (${this.weight}).`
           )
         );
 

@@ -228,7 +228,7 @@ export const createAssessment =
 
           dueDate,
 
-          totalMark,
+          totalMark: Number(weight),
 
           weight,
 
@@ -313,13 +313,12 @@ export const updateAssessment =
         req.body.dueDate ??
         assessment.dueDate;
 
-      assessment.totalMark =
-        req.body.totalMark ??
-        assessment.totalMark;
-
       assessment.weight =
         req.body.weight ??
         assessment.weight;
+
+      // In AeroLearn the assessment contribution is also its maximum score.
+      assessment.totalMark = Number(assessment.weight);
 
       assessment.description =
         req.body.description ??
@@ -403,13 +402,13 @@ export const updateScores =
         if (
           item.score < 0 ||
           item.score >
-            assessment.totalMark
+            assessment.weight
         ) {
 
           return res.status(400).json({
 
             message:
-              `Invalid score for student ${item.student}. Scores must be between 0 and ${assessment.totalMark}.`,
+              `Invalid score for student ${item.student}. Scores must be between 0 and ${assessment.weight}.`,
 
           });
 

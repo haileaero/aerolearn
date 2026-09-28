@@ -47,7 +47,7 @@ function AssessmentScores() {
     loadAssessment();
   }, [id]);
 
-  const maxScore = Number(assessment?.totalMark) || 100;
+  const maxScore = Number(assessment?.weight || assessment?.totalMark) || 100;
   const entered = scores.filter((item) => item.score !== "").length;
   const average = entered
     ? scores.reduce((sum, item) => sum + (item.score === "" ? 0 : Number(item.score) || 0), 0) / entered
@@ -113,7 +113,7 @@ function AssessmentScores() {
           <div><span><FaUsers /></span><strong>{scores.length}</strong><small>Students</small></div>
           <div><span><FaCheckCircle /></span><strong>{entered}</strong><small>Entered</small></div>
           <div><span className="pending-dot">•</span><strong>{Math.max(scores.length - entered, 0)}</strong><small>Remaining</small></div>
-          <div><span className="percent-symbol">%</span><strong>{average.toFixed(1)}</strong><small>Class average</small></div>
+          <div><span className="percent-symbol">✓</span><strong>{average.toFixed(1)} / {maxScore}</strong><small>Score</small></div>
         </div>
 
         <section className="score-sheet-card">
