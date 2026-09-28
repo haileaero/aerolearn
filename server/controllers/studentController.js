@@ -1,6 +1,7 @@
 import Student from "../models/student.js";
 import Course from "../models/course.js";
 import Assessment from "../models/assessment.js";
+import Attendance from "../models/attendance.js";
 
 const activeCourseFilterForStudent = (student) => ({
   department: student.department,
@@ -10,12 +11,26 @@ const activeCourseFilterForStudent = (student) => ({
 });
 
 async function reconcileStudentCourses(student) {
-  if (!student || student.status !== "Active") {
-    if (student && Array.isArray(student.courses) && student.courses.length) {
-      await Course.updateMany(
-        { students: student._id },
-        { $pull: { students: student._id } }
-      );
+  if (!student) return [];
+
+  const previousCourseIds = (student.courses || []).map((id) => id);
+
+  if (student.status !== "Active") {
+    if (previousCourseIds.length) {
+      await Promise.all([
+        Course.updateMany(
+          { students: student._id },
+          { $pull: { students: student._id } }
+        ),
+        Assessment.updateMany(
+          { course: { $in: previousCourseIds }, "scores.student": student._id },
+          { $pull: { scores: { student: student._id } } }
+        ),
+        Attendance.updateMany(
+          { course: { $in: previousCourseIds }, "students.student": student._id },
+          { $pull: { students: { student: student._id } } }
+        ),
+      ]);
       student.courses = [];
       await student.save();
     }
@@ -24,8 +39,10 @@ async function reconcileStudentCourses(student) {
 
   const matchedCourses = await Course.find(activeCourseFilterForStudent(student)).select("_id");
   const matchedIds = matchedCourses.map((course) => course._id);
-  const currentIds = (student.courses || []).map(String).sort();
+  const currentIds = previousCourseIds.map(String).sort();
   const nextIds = matchedIds.map(String).sort();
+  const nextIdSet = new Set(nextIds);
+  const removedCourseIds = previousCourseIds.filter((id) => !nextIdSet.has(String(id)));
 
   if (JSON.stringify(currentIds) !== JSON.stringify(nextIds)) {
     student.courses = matchedIds;
@@ -36,6 +53,21 @@ async function reconcileStudentCourses(student) {
     { students: student._id, _id: { $nin: matchedIds } },
     { $pull: { students: student._id } }
   );
+
+  // If a student is moved out of a course (year/department/semester/status
+  // change), remove that student's operational rows from the old course too.
+  if (removedCourseIds.length) {
+    await Promise.all([
+      Assessment.updateMany(
+        { course: { $in: removedCourseIds }, "scores.student": student._id },
+        { $pull: { scores: { student: student._id } } }
+      ),
+      Attendance.updateMany(
+        { course: { $in: removedCourseIds }, "students.student": student._id },
+        { $pull: { students: { student: student._id } } }
+      ),
+    ]);
+  }
 
   if (matchedIds.length) {
     await Course.updateMany(
@@ -502,10 +534,24 @@ export const deleteStudent = async (req, res) => {
       });
     }
 
-    await Course.updateMany(
-      { students: student._id },
-      { $pull: { students: student._id } }
-    );
+    // Hard-delete cleanup: a removed student must immediately disappear from
+    // every current course operation. Pull the reference from course rosters,
+    // assessment score sheets, and attendance sessions before deleting the
+    // student document so stale progress/averages/attendance cannot remain.
+    await Promise.all([
+      Course.updateMany(
+        { students: student._id },
+        { $pull: { students: student._id } }
+      ),
+      Assessment.updateMany(
+        { "scores.student": student._id },
+        { $pull: { scores: { student: student._id } } }
+      ),
+      Attendance.updateMany(
+        { "students.student": student._id },
+        { $pull: { students: { student: student._id } } }
+      ),
+    ]);
     await student.deleteOne();
 
     return res.json({

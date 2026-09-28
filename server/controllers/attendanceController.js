@@ -47,6 +47,13 @@ const backfillAttendanceSnapshots = async (attendance) => {
   return attendance;
 };
 
+
+const removeDeletedStudentsFromAttendance = (attendance) => {
+  if (!attendance || !Array.isArray(attendance.students)) return attendance;
+  attendance.students = attendance.students.filter((row) => row.student);
+  return attendance;
+};
+
 /* ============================================================
    GET ALL ATTENDANCE SESSIONS
 ============================================================ */
@@ -76,6 +83,7 @@ export const getAttendance = async (
         });
 
     await Promise.all(attendance.map((item) => backfillAttendanceSnapshots(item)));
+    attendance.forEach((item) => removeDeletedStudentsFromAttendance(item));
 
     res.status(200).json(
       attendance
@@ -132,6 +140,7 @@ export const getAttendanceById =
       }
 
       await backfillAttendanceSnapshots(attendance);
+      removeDeletedStudentsFromAttendance(attendance);
 
       res.status(200).json(
         attendance
@@ -203,6 +212,7 @@ export const getAttendanceByCourseWeek =
       }
 
       await backfillAttendanceSnapshots(attendance);
+      removeDeletedStudentsFromAttendance(attendance);
 
       res.status(200).json(
         attendance
@@ -310,6 +320,7 @@ export const createAttendance = async (req, res) => {
         );
 
     await backfillAttendanceSnapshots(populatedAttendance);
+    removeDeletedStudentsFromAttendance(populatedAttendance);
 
     res.status(201).json(
       populatedAttendance
@@ -437,6 +448,7 @@ export const updateAttendance =
           );
 
       await backfillAttendanceSnapshots(updatedAttendance);
+      removeDeletedStudentsFromAttendance(updatedAttendance);
 
       res.status(200).json(
         updatedAttendance
@@ -521,14 +533,16 @@ export const getAttendanceStatistics =
           course:
             req.params.courseId,
 
-        });
+        }).populate("students.student", "_id");
               let totalPresent = 0;
       let totalAbsent = 0;
       let totalLate = 0;
 
       attendance.forEach((session) => {
 
-        session.students.forEach(
+        session.students
+          .filter((student) => student.student)
+          .forEach(
           (student) => {
 
             switch (student.status) {

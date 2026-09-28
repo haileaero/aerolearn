@@ -1,4 +1,8 @@
 import User from "../models/user.js";
+import Student from "../models/student.js";
+import Course from "../models/course.js";
+import Assessment from "../models/assessment.js";
+import Attendance from "../models/attendance.js";
 
 /* ============================================================
    Helpers
@@ -692,6 +696,36 @@ export const deleteUser = async (
 
       });
 
+    }
+
+    // If a Student login is deleted from User Management, also remove the
+    // linked Student profile and every operational reference. This prevents
+    // ghost assessment progress, averages, and attendance rows.
+    if (user.role === "Student") {
+      const student = await Student.findOne({
+        $or: [
+          { user: user._id },
+          ...(user.studentId ? [{ studentId: user.studentId }] : []),
+        ],
+      });
+
+      if (student) {
+        await Promise.all([
+          Course.updateMany(
+            { students: student._id },
+            { $pull: { students: student._id } }
+          ),
+          Assessment.updateMany(
+            { "scores.student": student._id },
+            { $pull: { scores: { student: student._id } } }
+          ),
+          Attendance.updateMany(
+            { "students.student": student._id },
+            { $pull: { students: { student: student._id } } }
+          ),
+        ]);
+        await student.deleteOne();
+      }
     }
 
     await user.deleteOne();

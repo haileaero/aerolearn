@@ -36,6 +36,12 @@ export const getAssessments = async (
           createdAt: -1,
         });
 
+    // Populated score rows whose Student document no longer exists have
+    // student=null. Never expose/count those stale rows in instructor/admin UI.
+    for (const assessment of assessments) {
+      assessment.scores = (assessment.scores || []).filter((row) => row.student);
+    }
+
     res.status(200).json(
       assessments
     );
@@ -89,6 +95,8 @@ export const getAssessmentById =
         });
 
       }
+
+      assessment.scores = (assessment.scores || []).filter((row) => row.student);
 
       res.status(200).json(
         assessment
@@ -397,7 +405,19 @@ export const updateScores =
 
       }
 
+      const requestedStudentIds = req.body.scores.map((item) => item.student).filter(Boolean);
+      const existingStudentIds = new Set(
+        (await Student.find({ _id: { $in: requestedStudentIds } }).select("_id").lean())
+          .map((student) => String(student._id))
+      );
+
       for (const item of req.body.scores) {
+
+        if (!existingStudentIds.has(String(item.student))) {
+          return res.status(400).json({
+            message: "A score row belongs to a student who has been removed. Refresh the assessment and try again.",
+          });
+        }
 
         if (
           item.score < 0 ||
