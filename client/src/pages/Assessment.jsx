@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   FaChartBar,
@@ -16,6 +16,7 @@ import {
 import Layout from "../components/Layout";
 import api from "../api";
 import { useUI } from "../context/UIContext";
+import { AuthContext } from "../context/AuthContext";
 import "../styles/workspace.css";
 
 const initialForm = {
@@ -40,6 +41,7 @@ const scoreIsEntered = (score) => Boolean(score && (score.entered === true || Nu
 
 function Assessment() {
   const { confirm, toast } = useUI();
+  const { user } = useContext(AuthContext);
   const { id: legacyId } = useParams();
   const deskRef = useRef(null);
   const [courses, setCourses] = useState([]);
@@ -50,6 +52,8 @@ function Assessment() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [courseFilter, setCourseFilter] = useState("All");
+  const [studyYearFilter, setStudyYearFilter] = useState("All");
+  const [departmentFilter, setDepartmentFilter] = useState("All");
   const [selectedId, setSelectedId] = useState(legacyId || "");
   const [deskTab, setDeskTab] = useState("scores");
   const [scoreSearch, setScoreSearch] = useState("");
@@ -63,7 +67,7 @@ function Assessment() {
       setLoading(true);
       setError("");
       const [courseRes, assessmentRes] = await Promise.all([
-        api.get("/courses"),
+        api.get("/courses?limit=200"),
         api.get("/assessment"),
       ]);
       setCourses(
@@ -159,16 +163,44 @@ function Assessment() {
     }
   };
 
+  const studyYears = ["Year I", "Year II", "Year III", "Year IV", "Year V"];
+  const departmentsForYear = useMemo(() => [...new Set(
+    courses
+      .filter((course) => studyYearFilter === "All" || course.studyYear === studyYearFilter)
+      .map((course) => course.department)
+      .filter(Boolean)
+  )].sort(), [courses, studyYearFilter]);
+  const coursesForContext = useMemo(() => courses.filter((course) =>
+    (studyYearFilter === "All" || course.studyYear === studyYearFilter) &&
+    (departmentFilter === "All" || course.department === departmentFilter)
+  ), [courses, studyYearFilter, departmentFilter]);
+
+  useEffect(() => {
+    if (departmentFilter !== "All" && !departmentsForYear.includes(departmentFilter)) {
+      setDepartmentFilter("All");
+      setCourseFilter("All");
+    }
+  }, [departmentsForYear, departmentFilter]);
+
+  useEffect(() => {
+    if (courseFilter !== "All" && !coursesForContext.some((course) => course._id === courseFilter)) {
+      setCourseFilter("All");
+    }
+  }, [coursesForContext, courseFilter]);
+
   const filtered = useMemo(
     () => assessments.filter((item) => {
       const course = item.course && typeof item.course === "object" ? item.course : null;
       const courseId = courseIdOf(item.course);
+      const resolvedCourse = course || courses.find((entry) => entry._id === courseId);
+      const matchesYear = studyYearFilter === "All" || resolvedCourse?.studyYear === studyYearFilter;
+      const matchesDepartment = departmentFilter === "All" || resolvedCourse?.department === departmentFilter;
       const matchesCategory = categoryFilter === "All" || item.category === categoryFilter;
       const matchesCourse = courseFilter === "All" || courseId === courseFilter;
-      const haystack = `${item.title || ""} ${item.category || ""} ${course?.code || ""} ${course?.name || ""}`.toLowerCase();
-      return matchesCategory && matchesCourse && haystack.includes(search.toLowerCase());
+      const haystack = `${item.title || ""} ${item.category || ""} ${resolvedCourse?.code || ""} ${resolvedCourse?.name || ""} ${resolvedCourse?.department || ""}`.toLowerCase();
+      return matchesYear && matchesDepartment && matchesCategory && matchesCourse && haystack.includes(search.toLowerCase());
     }),
-    [assessments, search, categoryFilter, courseFilter]
+    [assessments, courses, search, studyYearFilter, departmentFilter, categoryFilter, courseFilter]
   );
 
   const titleOptions =
@@ -325,7 +357,9 @@ function Assessment() {
             <div><h2>Assessment plan</h2><span>Select Manage to work with scores and results below.</span></div>
             <div className="assessment-tools">
               <div className="assessment-search"><FaSearch /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" /></div>
-              <div className="assessment-filter"><FaFilter /><select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)}><option value="All">All courses</option>{courses.map((course) => <option key={course._id} value={course._id}>{course.code} — {course.name}</option>)}</select></div>
+              <div className="assessment-filter"><FaFilter /><select value={studyYearFilter} onChange={(e) => { setStudyYearFilter(e.target.value); setDepartmentFilter("All"); setCourseFilter("All"); }}><option value="All">All study years</option>{studyYears.map((year) => <option key={year} value={year}>{year}</option>)}</select></div>
+              <div className="assessment-filter"><select value={departmentFilter} onChange={(e) => { setDepartmentFilter(e.target.value); setCourseFilter("All"); }}><option value="All">All departments</option>{departmentsForYear.map((department) => <option key={department} value={department}>{department}</option>)}</select></div>
+              <div className="assessment-filter"><select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)}><option value="All">All assigned courses</option>{coursesForContext.map((course) => <option key={course._id} value={course._id}>{course.code} — {course.name}</option>)}</select></div>
               <div className="assessment-filter"><select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}><option>All</option><option>Quiz</option><option>Assignment</option><option>Lab</option><option>Project</option><option>Mid Exam</option><option>Final Exam</option></select></div>
             </div>
           </div>
@@ -346,7 +380,7 @@ function Assessment() {
                     const average = entered.length ? entered.reduce((sum, score) => sum + (Number(score.score) || 0), 0) / entered.length : 0;
                     return (
                       <tr key={item._id} className={selectedId === item._id ? "selected" : ""}>
-                        <td><div className="assessment-name-cell"><span className={`pill ${categoryPill(item.category)}`}>{item.category}</span><div><strong>{item.title}</strong><small>{`${courseMeta.code} · ${courseMeta.name}`}</small></div></div></td>
+                        <td><div className="assessment-name-cell"><span className={`pill ${categoryPill(item.category)}`}>{item.category}</span><div><strong>{item.title}</strong><small>{`${courseMeta.code} · ${courseMeta.name}${courseMeta.department ? ` · ${courseMeta.department}` : ""}`}</small></div></div></td>
                         <td><div className="assessment-date-cell"><strong>Week {item.week}</strong><span>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</span></div></td>
                         <td><span className="weight-chip">{item.weight}%</span></td>
                         <td><div className="plan-progress"><strong>{entered.length}/{itemScores.length}</strong><span>{entered.length === itemScores.length && itemScores.length ? "Complete" : "Entered"}</span></div></td>

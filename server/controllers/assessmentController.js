@@ -13,12 +13,18 @@ export const getAssessments = async (
 
   try {
 
+    const assessmentFilter = {};
+    if (req.user?.role === "Instructor") {
+      const assignedCourseIds = await Course.find({ instructor: req.user._id }).distinct("_id");
+      assessmentFilter.course = { $in: assignedCourseIds };
+    }
+
     const assessments =
-      await Assessment.find()
+      await Assessment.find(assessmentFilter)
 
         .populate(
           "course",
-          "code name department"
+          "code name department studyYear semester academicYear instructor"
         )
 
         .populate(
@@ -65,7 +71,7 @@ export const getAssessmentById =
 
           .populate(
             "course",
-            "code name department"
+            "code name department studyYear semester academicYear instructor"
           )
 
           .populate(
@@ -129,6 +135,10 @@ export const createAssessment =
 
       if (!selectedCourse) {
         return res.status(404).json({ message: "Course not found." });
+      }
+
+      if (req.user?.role === "Instructor" && String(selectedCourse.instructor || "") !== String(req.user._id)) {
+        return res.status(403).json({ message: "You can only create assessments for courses assigned to you." });
       }
 
       // Enrollment can exist on either side in older AeroLearn records.
@@ -235,7 +245,7 @@ export const createAssessment =
 
           .populate(
             "course",
-            "code name department"
+            "code name department studyYear semester academicYear instructor"
           )
 
           .populate(
@@ -323,7 +333,7 @@ export const updateAssessment =
 
           .populate(
             "course",
-            "code name department"
+            "code name department studyYear semester academicYear instructor"
           )
 
           .populate(
@@ -422,7 +432,7 @@ export const updateScores =
 
           .populate(
             "course",
-            "code name department"
+            "code name department studyYear semester academicYear instructor"
           )
 
           .populate(

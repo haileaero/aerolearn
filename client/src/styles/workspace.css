@@ -94,3 +94,8 @@
 @media(max-width:1200px){.create-onepage-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.create-onepage-grid .course-field,.create-onepage-grid .note-field{grid-column:span 2}}
 @media(max-width:800px){.create-onepage-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.create-onepage-grid .course-field,.create-onepage-grid .note-field{grid-column:1/-1}.assessment-create-actions{align-items:stretch;flex-direction:column}.assessment-create-actions .create-onepage-submit{width:100%;min-height:40px}}
 @media(max-width:560px){.create-onepage-grid{grid-template-columns:1fr}.create-onepage-grid .course-field,.create-onepage-grid .note-field{grid-column:auto}}
+
+/* v5.5 — contextual assessment filters */
+.assessment-plan-toolbar .assessment-tools{flex-wrap:wrap;justify-content:flex-end}
+.assessment-plan-toolbar .assessment-filter select{max-width:210px}
+@media(max-width:1100px){.assessment-plan-toolbar .assessment-tools{width:100%;justify-content:flex-start}.assessment-plan-toolbar{align-items:flex-start;flex-direction:column}}

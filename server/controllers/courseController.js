@@ -43,6 +43,13 @@ export const getCourses = async (req, res) => {
 
     const filter = {};
 
+    // Instructors only receive courses explicitly assigned to them. This keeps
+    // assessment/course selectors separated when the same course code is used
+    // by several departments.
+    if (req.user?.role === "Instructor") {
+      filter.instructor = req.user._id;
+    }
+
     // Students should only receive courses that match their current academic
     // profile. This prevents stale enrollment arrays from making My Courses
     // appear empty or exposing unrelated course records.
