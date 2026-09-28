@@ -23,6 +23,23 @@ const connectDB = async () => {
     );
     console.log("====================================\n");
 
+    // v5.4 migration: course codes are reusable across departments.
+    // Older deployments created a global unique `code_1` index; remove it
+    // and enforce uniqueness only for an exact academic course offering.
+    const courses = mongoose.connection.collection("courses");
+    const indexes = await courses.indexes();
+    const legacyCodeIndex = indexes.find(
+      (index) => index.name === "code_1" && index.unique
+    );
+    if (legacyCodeIndex) {
+      await courses.dropIndex("code_1");
+      console.log("🔄 Removed legacy global course-code uniqueness index");
+    }
+    await courses.createIndex(
+      { code: 1, department: 1, academicYear: 1, studyYear: 1, semester: 1 },
+      { unique: true, name: "course_offering_unique" }
+    );
+
     mongoose.connection.on(
       "disconnected",
       () => {

@@ -231,21 +231,26 @@ export const createCourse = async (req, res) => {
       });
     }
 
-    const existingCourse =
-      await Course.findOne({
-        code: code.trim().toUpperCase(),
-      });
+    const normalizedCode = code.trim().toUpperCase();
+    const normalizedAcademicYear = academicYear || new Date().getFullYear().toString();
+
+    const existingCourse = await Course.findOne({
+      code: normalizedCode,
+      department,
+      academicYear: normalizedAcademicYear,
+      studyYear,
+      semester,
+    });
 
     if (existingCourse) {
       return res.status(400).json({
-        message:
-          "Course code already exists.",
+        message: "This course offering already exists for the selected department, academic year, study year and semester.",
       });
     }
 
     const course = await Course.create({
 
-      code: code.trim().toUpperCase(),
+      code: normalizedCode,
 
       name,
 
@@ -257,7 +262,7 @@ export const createCourse = async (req, res) => {
 
       studyYear,
 
-      academicYear,
+      academicYear: normalizedAcademicYear,
 
       department,
 
@@ -293,6 +298,12 @@ export const createCourse = async (req, res) => {
 
     console.error(error);
 
+    if (error?.code === 11000) {
+      return res.status(400).json({
+        message: "This course offering already exists for the selected department, academic year, study year and semester.",
+      });
+    }
+
     return res.status(500).json({
       message: "Failed to create course.",
     });
@@ -318,39 +329,28 @@ export const updateCourse = async (req, res) => {
       });
     }
 
-    if (
-      req.body.code &&
-      req.body.code !== course.code
-    ) {
+    const nextCode = (req.body.code ?? course.code).trim().toUpperCase();
+    const nextDepartment = req.body.department ?? course.department;
+    const nextAcademicYear = req.body.academicYear ?? course.academicYear;
+    const nextStudyYear = req.body.studyYear ?? course.studyYear;
+    const nextSemester = req.body.semester ?? course.semester;
 
-      const existingCourse =
-        await Course.findOne({
+    const existingCourse = await Course.findOne({
+      _id: { $ne: course._id },
+      code: nextCode,
+      department: nextDepartment,
+      academicYear: nextAcademicYear,
+      studyYear: nextStudyYear,
+      semester: nextSemester,
+    });
 
-          code:
-            req.body.code
-              .trim()
-              .toUpperCase(),
-
-          _id: {
-            $ne: course._id,
-          },
-
-        });
-
-      if (existingCourse) {
-        return res.status(400).json({
-          message:
-            "Course code already exists.",
-        });
-      }
-
+    if (existingCourse) {
+      return res.status(400).json({
+        message: "This course offering already exists for the selected department, academic year, study year and semester.",
+      });
     }
 
-    course.code =
-      req.body.code
-        ?.trim()
-        .toUpperCase() ??
-      course.code;
+    course.code = nextCode;
 
     course.name =
       req.body.name ??
@@ -432,6 +432,12 @@ export const updateCourse = async (req, res) => {
   } catch (error) {
 
     console.error(error);
+
+    if (error?.code === 11000) {
+      return res.status(400).json({
+        message: "This course offering already exists for the selected department, academic year, study year and semester.",
+      });
+    }
 
     return res.status(500).json({
 

@@ -5,7 +5,6 @@ const courseSchema = new mongoose.Schema(
     code: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
     },
 
@@ -106,6 +105,14 @@ const courseSchema = new mongoose.Schema(
   {
     timestamps: true,
   }
+);
+
+// A course code may be offered to multiple departments.  Only the exact
+// academic offering is unique, so MENG 2010 can exist for Electronics,
+// Production, Mechanical, etc. without mixing those classes together.
+courseSchema.index(
+  { code: 1, department: 1, academicYear: 1, studyYear: 1, semester: 1 },
+  { unique: true, name: "course_offering_unique" }
 );
 
 export default mongoose.model(
