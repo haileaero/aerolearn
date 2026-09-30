@@ -43,7 +43,7 @@ function StudentForm({
 
   const loadStudentUsers = async () => {
     try {
-      const res = await api.get("/users");
+      const res = await api.get("/users/students");
 
       const allUsers = Array.isArray(res.data)
         ? res.data

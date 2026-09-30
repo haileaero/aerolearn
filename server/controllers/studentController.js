@@ -313,6 +313,17 @@ export const createStudent = async (req, res) => {
       });
     }
 
+    // A Student user account may only have one academic registry record.
+    // Enforce this server-side as well as filtering the registration picker.
+    if (user) {
+      const existingUserRegistration = await Student.findOne({ user });
+      if (existingUserRegistration) {
+        return res.status(400).json({
+          message: "This student user is already registered.",
+        });
+      }
+    }
+
     const existingStudent = await Student.findOne({
       studentId,
     });

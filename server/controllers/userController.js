@@ -248,22 +248,20 @@ export const getStudents = async (
 
   try {
 
-    const students =
-      await User.find({
+    // Only expose Student user accounts that have not yet been registered
+    // in the academic Student collection. This keeps the registration picker
+    // as a true "available users" list and prevents duplicate registry rows.
+    const registeredUserIds = await Student.distinct("user", {
+      user: { $ne: null },
+    });
 
-        role: "Student",
-
-        isActive: true,
-
-      })
-
-      .select(
-        "fullName email studentId department"
-      )
-
-     .sort({
-  createdAt: 1,
-})
+    const students = await User.find({
+      role: "Student",
+      isActive: true,
+      _id: { $nin: registeredUserIds },
+    })
+      .select("fullName email studentId department phone gender")
+      .sort({ createdAt: 1 })
 
     return res.json(
       students
