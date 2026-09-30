@@ -499,6 +499,15 @@ export const deleteAttendance =
 
       }
 
+      if (req.user?.role === "Instructor") {
+        const selectedCourse = await Course.findById(attendance.course).select("instructor").lean();
+        if (!selectedCourse || String(selectedCourse.instructor) !== String(req.user._id)) {
+          return res.status(403).json({
+            message: "You can only delete attendance for your assigned courses.",
+          });
+        }
+      }
+
       await attendance.deleteOne();
 
       res.status(200).json({

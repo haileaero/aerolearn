@@ -18,9 +18,9 @@ import {
   FaSave,
   FaIdCard,
   FaGraduationCap,
-  FaEye,
   FaEdit,
   FaPrint,
+  FaTrash,
 } from "react-icons/fa";
 
 const DEPARTMENTS = [
@@ -43,7 +43,7 @@ const getEntityId = (value) => (value && typeof value === "object" ? value._id :
 const clean = (value) => String(value ?? "").trim();
 
 function Attendance() {
-  const { toast } = useUI();
+  const { toast, confirm } = useUI();
   const [courses, setCourses] = useState([]);
   const [students, setStudents] = useState([]);
   const [history, setHistory] = useState([]);
@@ -80,7 +80,7 @@ function Attendance() {
     loadCourses();
   }, []);
 
-  const studyYears = useMemo(() => Array.from(new Set(courses.map((course) => clean(course.studyYear)).filter(Boolean))).sort(), [courses]);
+  const studyYears = ["Year I", "Year II", "Year III", "Year IV", "Year V"];
   const registerDepartments = useMemo(() => Array.from(new Set(courses.filter((course) => !selectedStudyYear || clean(course.studyYear) === selectedStudyYear).map((course) => course.department).filter(Boolean))).sort(), [courses, selectedStudyYear]);
   const filteredCourses = useMemo(
     () => selectedStudyYear && selectedDepartment ? courses.filter((course) => clean(course.studyYear) === selectedStudyYear && course.department === selectedDepartment) : [],
@@ -507,6 +507,33 @@ function Attendance() {
     } catch (err) { setError(err.response?.data?.message || "Unable to print attendance session."); }
   };
 
+  const deleteSavedSession = async (item) => {
+    const approved = await confirm({
+      title: "Delete attendance session?",
+      message: `This permanently removes ${item.course?.code || "this class"} attendance for ${item.date ? String(item.date).slice(0, 10) : "the selected date"}, Period ${item.period || 1}. You can register attendance for this class/date/period again afterward.`,
+      confirmText: "Delete attendance",
+      tone: "danger",
+    });
+    if (!approved) return;
+
+    try {
+      setError("");
+      await api.delete(`/attendance/${item._id}`);
+      setSearchedHistory((previous) => previous.filter((session) => session._id !== item._id));
+      if (attendanceId === item._id) {
+        setStudents([]);
+        setAttendanceId(null);
+        setRegisterMode("edit");
+      }
+      setMessage("Attendance session deleted. This class, date and period can now be registered again.");
+      toast("Attendance session deleted.");
+    } catch (err) {
+      const text = err.response?.data?.message || "Unable to delete attendance session.";
+      setError(text);
+      toast(text, "error");
+    }
+  };
+
   const sessionCounts = (item) => {
     const rows = asArray(item.students).filter((row) => row?.student);
     return rows.reduce((acc,row) => { acc.total++; if(row.status === "Present") acc.present++; else if(row.status === "Absent") acc.absent++; else if(row.status === "Late") acc.late++; return acc; }, {total:0,present:0,absent:0,late:0});
@@ -551,7 +578,7 @@ function Attendance() {
         {selectedCourseData && <section className="attendance-class-strip"><div><FaGraduationCap/><span>Course</span><strong>{selectedCourseData.code} — {selectedCourseData.name}</strong></div><div><FaIdCard/><span>Study year</span><strong>{selectedCourseData.studyYear || "—"}</strong></div><div><FaCalendarAlt/><span>Semester</span><strong>{selectedCourseData.semester || "—"}</strong></div><div><FaUsers/><span>Enrolled</span><strong>{asArray(selectedCourseData.students).length || students.length || "—"}</strong></div></section>}
 
         <section className="ops-card attendance-sessions-card attendance-search-card">
-          <div className="ops-card-head"><div><span className="al-eyebrow">SAVED ATTENDANCE</span><h2><FaHistory/> Search attendance</h2><p>These filters are independent from Register Attendance. Search existing sessions, then view, edit or print.</p></div></div>
+          <div className="ops-card-head"><div><span className="al-eyebrow">SAVED ATTENDANCE</span><h2><FaHistory/> Search attendance</h2><p>These filters are independent from Register Attendance. Search existing sessions, then edit, print or delete them.</p></div></div>
           <div className="ops-filter-grid attendance-filter-grid attendance-search-grid">
             <div className="field"><label>Study year</label><select value={searchStudyYear} onChange={(e)=>{setSearchStudyYear(e.target.value);setSearchDepartment("");setSearchCourse("");setSearchedHistory([])}}><option value="">Select year</option>{studyYears.map((y)=><option key={y} value={y}>{y}</option>)}</select></div>
             <div className="field"><label>Department</label><select value={searchDepartment} onChange={(e)=>{setSearchDepartment(e.target.value);setSearchCourse("");setSearchedHistory([])}} disabled={!searchStudyYear}><option value="">{searchStudyYear ? "Select department" : "Study year first"}</option>{searchDepartments.map((d)=><option key={d} value={d}>{d}</option>)}</select></div>
@@ -560,7 +587,7 @@ function Attendance() {
             <div className="field"><label>Period <small>(optional)</small></label><select value={searchPeriod} onChange={(e)=>setSearchPeriod(e.target.value)}><option value="">All periods</option>{[1,2,3,4,5].map((p)=><option key={p} value={p}>Period {p}</option>)}</select></div>
             <div className="field ops-load-field"><label>&nbsp;</label><button className="btn-compact btn-primary ops-load-btn" onClick={searchSavedAttendance} disabled={searchingHistory || !searchCourse}><FaHistory/> {searchingHistory ? "Searching…" : "Search attendance"}</button></div>
           </div>
-          {searchedHistory.length > 0 ? <div className="data-wrap"><table className="data-table attendance-session-table"><thead><tr><th>Date</th><th>Period</th><th>Department</th><th>Study year</th><th>Course</th><th>Students</th><th>Present</th><th>Absent</th><th>Late</th><th>Actions</th></tr></thead><tbody>{searchedHistory.map((item)=>{const counts=sessionCounts(item);return <tr key={item._id}><td><strong>{item.date ? String(item.date).slice(0,10) : "—"}</strong><small>Week {item.week}</small></td><td><strong>Period {item.period || 1}</strong></td><td>{item.department || item.course?.department || "—"}</td><td>{item.year || item.course?.studyYear || "—"}</td><td><strong>{item.course?.code || "—"}</strong><small>{item.course?.name || ""}</small></td><td>{counts.total}</td><td>{counts.present}</td><td>{counts.absent}</td><td>{counts.late}</td><td><div className="attendance-session-actions"><button onClick={()=>openSavedSession(item,"view")}><FaEye/> View</button><button onClick={()=>openSavedSession(item,"edit")}><FaEdit/> Edit</button><button onClick={()=>printSavedSession(item)}><FaPrint/> Print</button></div></td></tr>})}</tbody></table></div> : <div className="attendance-search-empty">Choose the saved-attendance filters and press <strong>Search attendance</strong>.</div>}
+          {searchedHistory.length > 0 ? <div className="data-wrap"><table className="data-table attendance-session-table"><thead><tr><th>Date</th><th>Period</th><th>Department</th><th>Study year</th><th>Course</th><th>Students</th><th>Present</th><th>Absent</th><th>Late</th><th>Actions</th></tr></thead><tbody>{searchedHistory.map((item)=>{const counts=sessionCounts(item);return <tr key={item._id}><td><strong>{item.date ? String(item.date).slice(0,10) : "—"}</strong><small>Week {item.week}</small></td><td><strong>Period {item.period || 1}</strong></td><td>{item.department || item.course?.department || "—"}</td><td>{item.year || item.course?.studyYear || "—"}</td><td><strong>{item.course?.code || "—"}</strong><small>{item.course?.name || ""}</small></td><td>{counts.total}</td><td>{counts.present}</td><td>{counts.absent}</td><td>{counts.late}</td><td><div className="attendance-session-actions"><button onClick={()=>openSavedSession(item,"edit")}><FaEdit/> Edit</button><button onClick={()=>printSavedSession(item)}><FaPrint/> Print</button><button className="attendance-delete-session" onClick={()=>deleteSavedSession(item)}><FaTrash/> Delete</button></div></td></tr>})}</tbody></table></div> : <div className="attendance-search-empty">Choose the saved-attendance filters and press <strong>Search attendance</strong>.</div>}
         </section>
 
         {students.length > 0 ? <>
