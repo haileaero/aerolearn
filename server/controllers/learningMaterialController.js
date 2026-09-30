@@ -134,7 +134,7 @@ export const getLearningMaterials = async (
     let filter = {};
 
     if (req.user?.role === "Student") {
-      const student = await Student.findOne({ studentId: req.user.studentId });
+      const student = await Student.findOne({ $or: [{ user: req.user._id }, { studentId: req.user.studentId }] });
 
       if (!student || student.status !== "Active") {
         return res.status(200).json([]);

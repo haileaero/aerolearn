@@ -5,7 +5,7 @@ function Footer() {
       <div className="footer-meta">
         <span>Secure learning workspace</span>
         <i aria-hidden="true" />
-        <span>v6.2</span>
+        <span>v6.3</span>
       </div>
     </footer>
   );

@@ -16,7 +16,7 @@ function MyCourses() {
   useEffect(() => {
     const loadMyCourses = async () => {
       try {
-        const profileRes = await api.get(`/students/profile/${user.studentId}`);
+        const profileRes = await api.get("/students/me");
         const student = profileRes.data;
         setProfile(student);
 
@@ -63,7 +63,7 @@ function MyCourses() {
       }
     };
 
-    if (user?.studentId) loadMyCourses();
+    if (user?.role === "Student") loadMyCourses();
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, [user]);

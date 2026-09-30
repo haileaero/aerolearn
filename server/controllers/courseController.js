@@ -54,7 +54,7 @@ export const getCourses = async (req, res) => {
     // profile. This prevents stale enrollment arrays from making My Courses
     // appear empty or exposing unrelated course records.
     if (req.user?.role === "Student") {
-      const student = await Student.findOne({ studentId: req.user.studentId });
+      const student = await Student.findOne({ $or: [{ user: req.user._id }, { studentId: req.user.studentId }] });
       if (!student || student.status !== "Active") {
         return res.json({ courses: [], pagination: { page: 1, limit, total: 0, pages: 0 } });
       }
@@ -173,7 +173,7 @@ export const getCourseById = async (req, res) => {
     }
 
     if (req.user?.role === "Student") {
-      const student = await Student.findOne({ studentId: req.user.studentId });
+      const student = await Student.findOne({ $or: [{ user: req.user._id }, { studentId: req.user.studentId }] });
       const eligible = student && student.status === "Active" &&
         String(student.department || "") === String(course.department || "") &&
         String(student.year || "") === String(course.studyYear || "") &&

@@ -537,7 +537,7 @@ export const getMyResults = async (req, res) => {
       return res.status(403).json({ message: "Student access only." });
     }
 
-    const student = await Student.findOne({ studentId: req.user.studentId });
+    const student = await Student.findOne({ $or: [{ user: req.user._id }, { studentId: req.user.studentId }] });
 
     if (!student) {
       return res.status(404).json({ message: "Student profile not found." });

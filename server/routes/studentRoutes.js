@@ -5,6 +5,7 @@ import {
   getStudents,
   getStudentById,
   getStudentProfile,
+  getMyStudentProfile,
   updateStudent,
   deleteStudent,
   searchStudents,
@@ -24,6 +25,9 @@ router.use(protect);
 router.get("/statistics", authorize("Admin", "Instructor"), getStudentStatistics);
 router.get("/search", authorize("Admin", "Instructor"), searchStudents);
 router.get("/", authorize("Admin", "Instructor"), getStudents);
+
+// Canonical logged-in student profile route. It does not depend on a URL-safe student ID.
+router.get("/me", authorize("Student"), getMyStudentProfile);
 
 // The existing profile endpoint is used by student-facing views too.
 router.get(

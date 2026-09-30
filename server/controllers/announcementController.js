@@ -11,7 +11,7 @@ export const getAnnouncements = async (req, res) => {
   try {
     const filter = { ...activeOnly() };
     if (isStudent(req.user)) {
-      const student = await Student.findOne({ studentId: req.user.studentId }).select("courses department year semester status");
+      const student = await Student.findOne({ $or: [{ user: req.user._id }, { studentId: req.user.studentId }] }).select("courses department year semester status");
       if (!student || student.status !== "Active") return res.json([]);
       let courseIds = (student.courses || []).map(String);
       const eligible = await Course.find({ department: student.department, studyYear: student.year, semester: student.semester, status: "Active" }).select("_id");
@@ -39,7 +39,7 @@ export const getAnnouncementById = async (req, res) => {
       .populate("course", "code name department studyYear semester");
     if (!announcement) return res.status(404).json({ message: "Announcement not found." });
     if (isStudent(req.user)) {
-      const student = await Student.findOne({ studentId: req.user.studentId }).select("courses department year semester status");
+      const student = await Student.findOne({ $or: [{ user: req.user._id }, { studentId: req.user.studentId }] }).select("courses department year semester status");
       if (!student || student.status !== "Active" || !announcement.course) {
         return res.status(403).json({ message: "Announcement not available for this account." });
       }

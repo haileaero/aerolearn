@@ -230,6 +230,45 @@ export const getStudentById = async (req, res) => {
    GET STUDENT PROFILE
 ============================================================ */
 
+export const getMyStudentProfile = async (req, res) => {
+  try {
+    if (req.user?.role !== "Student") {
+      return res.status(403).json({ message: "Student access only." });
+    }
+
+    const identityFilters = [{ user: req.user._id }];
+    if (req.user?.studentId) identityFilters.push({ studentId: req.user.studentId });
+    if (req.user?.email) identityFilters.push({ email: String(req.user.email).toLowerCase() });
+
+    const studentRecord = await Student.findOne({ $or: identityFilters });
+    if (!studentRecord) {
+      return res.status(404).json({ message: "Student profile not found. Ask the administrator to link your Student user to the Student Directory." });
+    }
+
+    // Repair older registry rows that were created before the User link became canonical.
+    if (!studentRecord.user || String(studentRecord.user) !== String(req.user._id)) {
+      studentRecord.user = req.user._id;
+      await studentRecord.save();
+    }
+
+    await reconcileStudentCourses(studentRecord);
+
+    const student = await Student.findById(studentRecord._id)
+      .populate("user", "fullName email studentId department phone role")
+      .populate("advisor", "fullName email")
+      .populate({
+        path: "courses",
+        match: { status: "Active" },
+        populate: { path: "instructor", select: "fullName email" },
+      });
+
+    return res.json(student);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Failed to retrieve student profile." });
+  }
+};
+
 export const getStudentProfile = async (req, res) => {
   try {
     if (
