@@ -260,7 +260,7 @@ export const getStudents = async (
       isActive: true,
       _id: { $nin: registeredUserIds },
     })
-      .select("fullName email studentId department phone gender")
+      .select("fullName email studentId department phone gender role isActive")
       .sort({ createdAt: 1 })
 
     return res.json(

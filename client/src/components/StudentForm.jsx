@@ -49,11 +49,13 @@ function StudentForm({
         ? res.data
         : res.data.users || [];
 
+      // /users/students already returns only active Student-role users
+      // that do not have an academic Student registration. Keep this
+      // client tolerant of older API responses where `role` was omitted.
       const students = allUsers.filter(
         (user) =>
-          user.role &&
-          user.role.toLowerCase() ===
-            "student"
+          !user.role ||
+          user.role.toLowerCase() === "student"
       );
 
       setStudentUsers(students);
