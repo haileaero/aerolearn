@@ -16,17 +16,21 @@ const buildAttendanceRows = async (rows = []) => {
     .lean();
   const byId = new Map(roster.map((student) => [String(student._id), student]));
 
-  return normalized.map((row) => {
+  const seen = new Set();
+  return normalized.flatMap((row) => {
     const id = row?.student && typeof row.student === "object" ? row.student._id : row?.student;
-    const student = id ? byId.get(String(id)) : null;
-    return {
+    if (!id || seen.has(String(id))) return [];
+    seen.add(String(id));
+    const student = byId.get(String(id));
+    if (!student) return [];
+    return [{
       student: id,
-      studentId: student?.studentId || row?.studentId || "",
-      studentName: student?.fullName || row?.studentName || "",
-      section: student?.section || row?.section || "",
-      year: student?.year || row?.year || "",
+      studentId: student.studentId || row?.studentId || "",
+      studentName: student.fullName || row?.studentName || "",
+      section: student.section || row?.section || "",
+      year: student.year || row?.year || "",
       status: row?.status || "Present",
-    };
+    }];
   });
 };
 
@@ -256,19 +260,16 @@ export const createAttendance = async (req, res) => {
       });
     }
 
-    // Check if attendance already exists
+    // One class/date/period is one attendance session. If an older client
+    // submits it again, update that session instead of creating duplicates.
+    const dayStart = new Date(`${String(date).slice(0, 10)}T00:00:00.000Z`);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
     const existingAttendance = await Attendance.findOne({
       course,
-      week,
       period,
+      date: { $gte: dayStart, $lt: dayEnd },
     });
-
-    if (existingAttendance) {
-      return res.status(400).json({
-        message:
-          "Attendance already exists for this week and period.",
-      });
-    }
 
     // Validate attendance statuses
     const allowedStatus = [
@@ -288,6 +289,22 @@ export const createAttendance = async (req, res) => {
 
     // Store a stable identity snapshot with each attendance row.
     const attendanceRows = await buildAttendanceRows(students);
+
+    if (existingAttendance) {
+      existingAttendance.department = selectedCourse.department;
+      existingAttendance.year = selectedCourse.studyYear;
+      existingAttendance.week = week;
+      existingAttendance.period = period;
+      existingAttendance.date = date;
+      existingAttendance.students = attendanceRows;
+      await existingAttendance.save();
+
+      const populated = await Attendance.findById(existingAttendance._id)
+        .populate("course", "code name department studyYear semester")
+        .populate("students.student", "studentId fullName department section year status");
+      removeDeletedStudentsFromAttendance(populated);
+      return res.status(200).json(populated);
+    }
 
     // Create attendance
     const attendance = await Attendance.create({
@@ -674,11 +691,15 @@ export const getAttendanceHistory =
 
           .populate(
             "course",
-            "code name department"
+            "code name department studyYear semester"
+          )
+          .populate(
+            "students.student",
+            "studentId fullName department section year status"
           )
 
           .select(
-            "course week period date createdAt"
+            "department year course week period date students createdAt updatedAt"
           )
 
           .sort({

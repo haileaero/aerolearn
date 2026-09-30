@@ -18,6 +18,9 @@ import {
   FaSave,
   FaIdCard,
   FaGraduationCap,
+  FaEye,
+  FaEdit,
+  FaPrint,
 } from "react-icons/fa";
 
 const DEPARTMENTS = [
@@ -55,6 +58,7 @@ function Attendance() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [rosterWarning, setRosterWarning] = useState("");
+  const [registerMode, setRegisterMode] = useState("edit");
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -127,8 +131,9 @@ function Attendance() {
   });
 
   const mergeRosterWithAttendance = (courseRoster, attendanceRows) => {
-    const roster = asArray(courseRoster).map(normalizeRosterStudent);
-    const saved = asArray(attendanceRows).map(normalizeAttendanceStudent);
+    const uniqueByStudent = (rows) => Array.from(new Map(asArray(rows).filter(Boolean).map((row) => [String(getEntityId(row?.student || row) || row?.studentId || row?._id || ""), row])).values());
+    const roster = uniqueByStudent(courseRoster).map(normalizeRosterStudent);
+    const saved = uniqueByStudent(attendanceRows).map(normalizeAttendanceStudent);
     const savedByStudent = new Map(saved.filter((row) => row.student).map((row) => [String(row.student), row]));
 
     if (!roster.length) return saved;
@@ -151,6 +156,7 @@ function Attendance() {
     setError("");
     setMessage("");
     setRosterWarning("");
+    setRegisterMode("edit");
 
     try {
       const courseResponse = await api.get(`/courses/${selectedCourse}`);
@@ -226,17 +232,17 @@ function Attendance() {
       };
 
       if (attendanceId) {
-        const response = await api.put(`/attendance/${attendanceId}`, payload);
-        setStudents(mergeRosterWithAttendance(students, response.data?.students));
-        setMessage("Attendance updated successfully.");
+        await api.put(`/attendance/${attendanceId}`, payload);
+        setMessage("Attendance updated successfully. The saved session is listed below.");
         toast("Attendance updated successfully.");
       } else {
-        const response = await api.post("/attendance", payload);
-        setAttendanceId(response.data?._id || null);
-        setStudents(mergeRosterWithAttendance(students, response.data?.students));
-        setMessage("Attendance saved successfully.");
+        await api.post("/attendance", payload);
+        setMessage("Attendance saved successfully. The register is closed and the session is listed below.");
         toast("Attendance saved successfully.");
       }
+      setStudents([]);
+      setAttendanceId(null);
+      setRegisterMode("edit");
       await loadHistory(selectedCourse);
     } catch (err) {
       const text = err.response?.data?.message || "Unable to save attendance.";
@@ -453,12 +459,45 @@ function Attendance() {
     else setHistory([]);
   };
 
-  const handleHistoryClick = async (item) => {
-    const selectedWeek = item.week || 1;
-    const selectedPeriod = item.period || 1;
-    setWeek(selectedWeek);
-    setPeriod(selectedPeriod);
-    await loadStudents(selectedWeek, selectedPeriod);
+  const openSavedSession = async (item, mode = "view") => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await api.get(`/attendance/${item._id}`);
+      const session = response.data;
+      setWeek(session.week || 1);
+      setPeriod(session.period || 1);
+      setDate(session.date ? String(session.date).slice(0, 10) : "");
+      setAttendanceId(session._id);
+      setStudents(asArray(session.students).map(normalizeAttendanceStudent));
+      setRegisterMode(mode);
+      setMessage(mode === "edit" ? "Attendance session opened for editing." : "Attendance session opened in view mode.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to open attendance session.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const printSavedSession = async (item) => {
+    try {
+      const response = await api.get(`/attendance/${item._id}`);
+      const session = response.data;
+      const rows = asArray(session.students).map(normalizeAttendanceStudent);
+      const doc = new jsPDF({ unit: "mm", format: "a4" });
+      doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.text("AeroLearn Attendance Report", 14, 18);
+      doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+      doc.text(`${session.course?.code || ""} — ${session.course?.name || ""}`, 14, 26);
+      doc.text(`${session.department || session.course?.department || "—"} | ${session.year || session.course?.studyYear || "—"} | ${String(session.date || "").slice(0,10)}`, 14, 32);
+      autoTable(doc, { startY: 39, head: [["#","Student ID","Student","Year","Section","Status"]], body: rows.map((r,i)=>[i+1,r.studentId,r.fullName,r.year,r.section,r.status]), theme: "grid" });
+      doc.autoPrint();
+      window.open(doc.output("bloburl"), "_blank", "noopener,noreferrer");
+    } catch (err) { setError(err.response?.data?.message || "Unable to print attendance session."); }
+  };
+
+  const sessionCounts = (item) => {
+    const rows = asArray(item.students).filter((row) => row?.student);
+    return rows.reduce((acc,row) => { acc.total++; if(row.status === "Present") acc.present++; else if(row.status === "Absent") acc.absent++; else if(row.status === "Late") acc.late++; return acc; }, {total:0,present:0,absent:0,late:0});
   };
 
   return (
@@ -508,7 +547,11 @@ function Attendance() {
           </section>
         )}
 
-        {history.length > 0 && <section className="ops-history"><div className="ops-history-title"><FaHistory /><span>Recent sessions</span></div><div className="ops-history-list">{history.slice(0, 12).map((item) => <button key={item._id} className={item.week === week && (item.period || 1) === period ? "active" : ""} onClick={() => handleHistoryClick(item)}><strong>W{item.week}</strong><span>P{item.period || 1}</span><small>{item.date ? String(item.date).slice(5, 10) : ""}</small></button>)}</div></section>}
+        {history.length > 0 && <section className="ops-card attendance-sessions-card">
+          <div className="ops-card-head"><div><h2><FaHistory /> Saved attendance sessions</h2><p>Each class meeting is stored as one session. View, edit or print without creating duplicates.</p></div></div>
+          <div className="data-wrap"><table className="data-table attendance-session-table"><thead><tr><th>Date</th><th>Department</th><th>Study year</th><th>Course</th><th>Students</th><th>Present</th><th>Absent</th><th>Late</th><th>Actions</th></tr></thead>
+          <tbody>{history.map((item) => { const counts=sessionCounts(item); return <tr key={item._id}><td><strong>{item.date ? String(item.date).slice(0,10) : "—"}</strong><small>W{item.week} · P{item.period || 1}</small></td><td>{item.department || item.course?.department || "—"}</td><td>{item.year || item.course?.studyYear || "—"}</td><td><strong>{item.course?.code || "—"}</strong><small>{item.course?.name || ""}</small></td><td>{counts.total}</td><td>{counts.present}</td><td>{counts.absent}</td><td>{counts.late}</td><td><div className="attendance-session-actions"><button onClick={()=>openSavedSession(item,"view")}><FaEye/> View</button><button onClick={()=>openSavedSession(item,"edit")}><FaEdit/> Edit</button><button onClick={()=>printSavedSession(item)}><FaPrint/> Print</button></div></td></tr> })}</tbody></table></div>
+        </section>}
 
         {students.length > 0 ? <>
           <div className="ops-metrics">
@@ -523,7 +566,7 @@ function Attendance() {
             <div className="ops-card-head">
               <div><h2>Class register</h2><p>{selectedCourseData ? `${selectedCourseData.code} — ${selectedCourseData.name}` : "Selected course"} · Week {week} · Period {period} · {date || "No date selected"}</p></div>
               <div className="ops-quick-actions attendance-report-actions">
-                <button className="btn-compact btn-soft-green" onClick={() => setStudents((prev) => prev.map((student) => ({ ...student, status: "Present" })))}><FaCheckCircle /> Mark all present</button>
+                {registerMode === "edit" && <button className="btn-compact btn-soft-green" onClick={() => setStudents((prev) => prev.map((student) => ({ ...student, status: "Present" })))}><FaCheckCircle /> Mark all present</button>}
                 <button className="btn-compact btn-soft" onClick={previewPDF}><FaFilePdf /> Preview PDF</button>
                 <button className="btn-compact btn-soft" onClick={downloadPDF} title="Download attendance PDF"><FaDownload /> Download</button>
               </div>
@@ -540,14 +583,14 @@ function Attendance() {
                   <td><strong className="attendance-student-name">{student.fullName || "Student record unavailable"}</strong></td>
                   <td>{student.year || "—"}</td>
                   <td>{student.section || "—"}</td>
-                  <td><div className="attendance-status-switch" role="group" aria-label={`Attendance status for ${student.fullName || "student"}`}>{STATUS_OPTIONS.map((status) => <button type="button" key={status} className={`${status.toLowerCase()} ${(student.status || "Present") === status ? "active" : ""}`} aria-pressed={(student.status || "Present") === status} onClick={() => handleStatusChange(index, status)}>{status}</button>)}</div></td>
+                  <td><div className="attendance-status-switch" role="group" aria-label={`Attendance status for ${student.fullName || "student"}`}>{STATUS_OPTIONS.map((status) => <button type="button" key={status} className={`${status.toLowerCase()} ${(student.status || "Present") === status ? "active" : ""}`} aria-pressed={(student.status || "Present") === status} onClick={() => registerMode === "edit" && handleStatusChange(index, status)} disabled={registerMode === "view"}>{status}</button>)}</div></td>
                 </tr>)}</tbody>
               </table>
             </div>
 
             <div className="ops-save-bar">
               <div><span>{attendanceId ? "Saved attendance session" : "Unsaved attendance session"}</span><small>{date ? `${date} · ${summary.total} student${summary.total === 1 ? "" : "s"} · ${summary.percentage}% present` : "Choose a date before saving"}</small></div>
-              <button className="btn-compact btn-primary" onClick={saveAttendance} disabled={saving}><FaSave /> {saving ? "Saving…" : attendanceId ? "Update attendance" : "Save attendance"}</button>
+              <div className="attendance-save-actions"><button className="btn-compact btn-soft" onClick={() => { setStudents([]); setAttendanceId(null); setRegisterMode("edit"); }} type="button">Close</button>{registerMode === "edit" && <button className="btn-compact btn-primary" onClick={saveAttendance} disabled={saving}><FaSave /> {saving ? "Saving…" : attendanceId ? "Update attendance" : "Save attendance"}</button>}</div>
             </div>
           </section>
         </> : <section className="ops-empty"><FaClipboardCheck /><div><strong>No register open</strong><span>Select department, course, week and period, then open the register.</span></div></section>}
