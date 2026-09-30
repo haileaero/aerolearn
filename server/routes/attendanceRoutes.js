@@ -3,6 +3,7 @@ import express from "express";
 import {
   getAttendance,
   getAttendanceById,
+  getMyCourseAttendance,
   checkAttendanceSession,
   getAttendanceByCourseWeek,
   getAttendanceHistory,
@@ -21,6 +22,9 @@ const router = express.Router();
 
 // Every attendance endpoint requires an authenticated user.
 router.use(protect);
+
+// Students can retrieve only their own attendance rows for a course.
+router.get("/my/course/:courseId", authorize("Student"), getMyCourseAttendance);
 
 // Admins and instructors may review attendance data.
 router.get("/", authorize("Admin", "Instructor"), getAttendance);

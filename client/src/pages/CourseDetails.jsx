@@ -206,7 +206,9 @@ function CourseDetails() {
 
         const attendanceRes =
           await api.get(
-            "/attendance"
+            isStudent(user)
+              ? `/attendance/my/course/${courseData._id}`
+              : "/attendance"
           );
 
         const attendanceRows = Array.isArray(attendanceRes.data)
@@ -263,7 +265,7 @@ function CourseDetails() {
 
     }
 
-  }, [id]);
+  }, [id, user]);
 
   useEffect(() => {
     if (!id) return;

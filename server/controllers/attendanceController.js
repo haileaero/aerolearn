@@ -114,6 +114,73 @@ export const checkAttendanceSession = async (req, res) => {
   }
 };
 
+
+/* ============================================================
+   GET AUTHENTICATED STUDENT'S OWN ATTENDANCE FOR A COURSE
+   Privacy: returns only the logged-in student's row per session.
+============================================================ */
+export const getMyCourseAttendance = async (req, res) => {
+  try {
+    if (req.user?.role !== "Student") {
+      return res.status(403).json({ message: "Student access only." });
+    }
+
+    const identityFilters = [{ user: req.user._id }];
+    if (req.user?.studentId) identityFilters.push({ studentId: req.user.studentId });
+    if (req.user?.email) identityFilters.push({ email: String(req.user.email).toLowerCase() });
+
+    const student = await Student.findOne({ $or: identityFilters }).select("_id studentId fullName department year semester status courses").lean();
+    if (!student) {
+      return res.status(404).json({ message: "Student profile not found." });
+    }
+
+    const course = await Course.findById(req.params.courseId).select("_id code name department studyYear semester status students").lean();
+    if (!course) return res.status(404).json({ message: "Course not found." });
+
+    const explicitlyLinked = (student.courses || []).some((id) => String(id) === String(course._id)) ||
+      (course.students || []).some((id) => String(id) === String(student._id));
+    const profileMatch = student.status === "Active" && course.status === "Active" &&
+      String(student.department || "") === String(course.department || "") &&
+      String(student.year || "") === String(course.studyYear || "") &&
+      String(student.semester || "") === String(course.semester || "");
+
+    if (!explicitlyLinked && !profileMatch) {
+      return res.status(403).json({ message: "This course is not assigned to your student profile." });
+    }
+
+    const sessions = await Attendance.find({
+      course: course._id,
+      "students.student": student._id,
+    }).select("course week period date department year semester students createdAt updatedAt").sort({ date: -1, period: 1 }).lean();
+
+    const ownSessions = sessions.map((session) => {
+      const ownRow = (session.students || []).find((row) => String(row.student) === String(student._id));
+      return {
+        _id: session._id,
+        course: session.course,
+        week: session.week,
+        period: session.period,
+        date: session.date,
+        department: session.department,
+        year: session.year,
+        semester: session.semester,
+        ownStatus: ownRow?.status || "",
+        students: ownRow ? [{
+          student: student._id,
+          studentId: student.studentId,
+          studentName: student.fullName,
+          status: ownRow.status,
+        }] : [],
+      };
+    });
+
+    return res.status(200).json(ownSessions);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Failed to load your attendance history." });
+  }
+};
+
 /* ============================================================
    GET SINGLE ATTENDANCE SESSION
 ============================================================ */
