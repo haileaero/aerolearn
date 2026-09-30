@@ -62,50 +62,56 @@ const removeDeletedStudentsFromAttendance = (attendance) => {
    GET ALL ATTENDANCE SESSIONS
 ============================================================ */
 
-export const getAttendance = async (
-  req,
-  res
-) => {
-
+export const getAttendance = async (req, res) => {
   try {
-
-    const attendance =
-      await Attendance.find()
-
-        .populate(
-          "course",
-          "code name department"
-        )
-
-        .populate(
-          "students.student",
-          "studentId fullName department section year status"
-        )
-
-        .sort({
-          date: -1,
-        });
-
+    const filter = {};
+    if (req.query.course) filter.course = req.query.course;
+    if (req.query.department) filter.department = req.query.department;
+    if (req.query.studyYear) filter.year = req.query.studyYear;
+    if (req.query.period) filter.period = Number(req.query.period);
+    if (req.query.date) {
+      const dayStart = new Date(`${String(req.query.date).slice(0, 10)}T00:00:00.000Z`);
+      const dayEnd = new Date(dayStart); dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+      filter.date = { $gte: dayStart, $lt: dayEnd };
+    }
+    if (req.user?.role === "Instructor") {
+      const assigned = await Course.find({ instructor: req.user._id }).select("_id").lean();
+      const assignedIds = assigned.map((course) => course._id);
+      if (filter.course && !assignedIds.some((id) => String(id) === String(filter.course))) {
+        return res.status(403).json({ message: "You can only search attendance for your assigned courses." });
+      }
+      if (!filter.course) filter.course = { $in: assignedIds };
+    }
+    const attendance = await Attendance.find(filter)
+      .populate("course", "code name department studyYear semester")
+      .populate("students.student", "studentId fullName department section year status")
+      .sort({ date: -1, period: 1 });
     await Promise.all(attendance.map((item) => backfillAttendanceSnapshots(item)));
     attendance.forEach((item) => removeDeletedStudentsFromAttendance(item));
-
-    res.status(200).json(
-      attendance
-    );
-
+    res.status(200).json(attendance);
   } catch (error) {
-
     console.error(error);
-
-    res.status(500).json({
-
-      message:
-        "Failed to load attendance records.",
-
-    });
-
+    res.status(500).json({ message: "Failed to load attendance records." });
   }
+};
 
+export const checkAttendanceSession = async (req, res) => {
+  try {
+    const { course, date, period } = req.query;
+    if (!course || !date || !period) return res.status(400).json({ message: "Course, date and period are required." });
+    const selectedCourse = await Course.findById(course).select("instructor").lean();
+    if (!selectedCourse) return res.status(404).json({ message: "Course not found." });
+    if (req.user?.role === "Instructor" && String(selectedCourse.instructor) !== String(req.user._id)) {
+      return res.status(403).json({ message: "You can only register attendance for your assigned courses." });
+    }
+    const dayStart = new Date(`${String(date).slice(0,10)}T00:00:00.000Z`);
+    const dayEnd = new Date(dayStart); dayEnd.setUTCDate(dayEnd.getUTCDate()+1);
+    const existing = await Attendance.findOne({ course, period: Number(period), date: { $gte: dayStart, $lt: dayEnd } }).select("_id week period date").lean();
+    res.status(200).json({ exists: Boolean(existing), session: existing || null });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to check attendance session." });
+  }
 };
 
 /* ============================================================
@@ -291,19 +297,10 @@ export const createAttendance = async (req, res) => {
     const attendanceRows = await buildAttendanceRows(students);
 
     if (existingAttendance) {
-      existingAttendance.department = selectedCourse.department;
-      existingAttendance.year = selectedCourse.studyYear;
-      existingAttendance.week = week;
-      existingAttendance.period = period;
-      existingAttendance.date = date;
-      existingAttendance.students = attendanceRows;
-      await existingAttendance.save();
-
-      const populated = await Attendance.findById(existingAttendance._id)
-        .populate("course", "code name department studyYear semester")
-        .populate("students.student", "studentId fullName department section year status");
-      removeDeletedStudentsFromAttendance(populated);
-      return res.status(200).json(populated);
+      return res.status(409).json({
+        message: `Attendance already exists for this class on ${String(date).slice(0, 10)}, Period ${period}. Open Saved Attendance to view or edit it.`,
+        attendanceId: existingAttendance._id,
+      });
     }
 
     // Create attendance
@@ -382,30 +379,21 @@ export const updateAttendance =
 
       }
 
-      const duplicate =
-        await Attendance.findOne({
-
-          _id: {
-            $ne: req.params.id,
-          },
-
-          course:
-            attendance.course,
-
-          week:
-            req.body.week,
-
-          period:
-            req.body.period,
-
-        });
+      const updateDayStart = new Date(`${String(req.body.date).slice(0, 10)}T00:00:00.000Z`);
+      const updateDayEnd = new Date(updateDayStart); updateDayEnd.setUTCDate(updateDayEnd.getUTCDate() + 1);
+      const duplicate = await Attendance.findOne({
+        _id: { $ne: req.params.id },
+        course: attendance.course,
+        period: req.body.period,
+        date: { $gte: updateDayStart, $lt: updateDayEnd },
+      });
 
       if (duplicate) {
 
         return res.status(400).json({
 
           message:
-            "Another attendance session already exists for this week and period.",
+            "Another attendance session already exists for this course, date and period.",
 
         });
 

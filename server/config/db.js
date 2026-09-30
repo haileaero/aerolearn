@@ -40,6 +40,34 @@ const connectDB = async () => {
       { unique: true, name: "course_offering_unique" }
     );
 
+    // v6.1 migration: attendance uniqueness follows the actual class meeting:
+    // one course + calendar date + period. Week is descriptive, not identity.
+    const attendance = mongoose.connection.collection("attendances");
+    const attendanceIndexes = await attendance.indexes();
+    const legacyAttendanceIndex = attendanceIndexes.find((index) =>
+      index.unique && index.key?.course === 1 && index.key?.week === 1 && index.key?.period === 1
+    );
+    if (legacyAttendanceIndex) {
+      await attendance.dropIndex(legacyAttendanceIndex.name);
+      console.log("🔄 Removed legacy attendance week/period uniqueness index");
+    }
+    // Clean any duplicates produced by older attendance builds before the
+    // database-level uniqueness constraint is installed. Keep the newest copy.
+    const duplicateAttendanceGroups = await attendance.aggregate([
+      { $group: { _id: { course: "$course", date: "$date", period: "$period" }, ids: { $push: "$_id" }, count: { $sum: 1 } } },
+      { $match: { count: { $gt: 1 } } },
+    ]).toArray();
+    for (const group of duplicateAttendanceGroups) {
+      const duplicates = await attendance.find({ _id: { $in: group.ids } }).sort({ updatedAt: -1, createdAt: -1 }).toArray();
+      const removeIds = duplicates.slice(1).map((item) => item._id);
+      if (removeIds.length) await attendance.deleteMany({ _id: { $in: removeIds } });
+    }
+    if (duplicateAttendanceGroups.length) console.log(`🔄 Cleaned ${duplicateAttendanceGroups.length} duplicate attendance session group(s)`);
+    await attendance.createIndex(
+      { course: 1, date: 1, period: 1 },
+      { unique: true, name: "attendance_course_date_period_unique" }
+    );
+
     mongoose.connection.on(
       "disconnected",
       () => {

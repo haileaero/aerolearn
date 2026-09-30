@@ -47,8 +47,16 @@ function Attendance() {
   const [courses, setCourses] = useState([]);
   const [students, setStudents] = useState([]);
   const [history, setHistory] = useState([]);
+  const [selectedStudyYear, setSelectedStudyYear] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("");
+  const [searchStudyYear, setSearchStudyYear] = useState("");
+  const [searchDepartment, setSearchDepartment] = useState("");
+  const [searchCourse, setSearchCourse] = useState("");
+  const [searchDate, setSearchDate] = useState("");
+  const [searchPeriod, setSearchPeriod] = useState("");
+  const [searchedHistory, setSearchedHistory] = useState([]);
+  const [searchingHistory, setSearchingHistory] = useState(false);
   const [week, setWeek] = useState(1);
   const [period, setPeriod] = useState(1);
   const [date, setDate] = useState("");
@@ -72,10 +80,14 @@ function Attendance() {
     loadCourses();
   }, []);
 
+  const studyYears = useMemo(() => Array.from(new Set(courses.map((course) => clean(course.studyYear)).filter(Boolean))).sort(), [courses]);
+  const registerDepartments = useMemo(() => Array.from(new Set(courses.filter((course) => !selectedStudyYear || clean(course.studyYear) === selectedStudyYear).map((course) => course.department).filter(Boolean))).sort(), [courses, selectedStudyYear]);
   const filteredCourses = useMemo(
-    () => selectedDepartment ? courses.filter((course) => course.department === selectedDepartment) : [],
-    [courses, selectedDepartment]
+    () => selectedStudyYear && selectedDepartment ? courses.filter((course) => clean(course.studyYear) === selectedStudyYear && course.department === selectedDepartment) : [],
+    [courses, selectedStudyYear, selectedDepartment]
   );
+  const searchDepartments = useMemo(() => Array.from(new Set(courses.filter((course) => !searchStudyYear || clean(course.studyYear) === searchStudyYear).map((course) => course.department).filter(Boolean))).sort(), [courses, searchStudyYear]);
+  const searchCourses = useMemo(() => courses.filter((course) => (!searchStudyYear || clean(course.studyYear) === searchStudyYear) && (!searchDepartment || course.department === searchDepartment)), [courses, searchStudyYear, searchDepartment]);
 
   const selectedCourseData = useMemo(
     () => courses.find((course) => course._id === selectedCourse),
@@ -100,16 +112,35 @@ function Attendance() {
   }, [students]);
 
   const loadHistory = async (courseId) => {
-    if (!courseId) {
-      setHistory([]);
-      return;
-    }
+    if (!courseId) return [];
     try {
       const response = await api.get(`/attendance/history/${courseId}`);
-      setHistory(asArray(response.data));
+      const rows = asArray(response.data);
+      setHistory(rows);
+      return rows;
     } catch {
       setHistory([]);
+      return [];
     }
+  };
+
+  const searchSavedAttendance = async () => {
+    if (!searchStudyYear) return setError("Select a study year to search saved attendance.");
+    if (!searchDepartment) return setError("Select a department to search saved attendance.");
+    if (!searchCourse) return setError("Select a course to search saved attendance.");
+    setSearchingHistory(true); setError(""); setMessage("");
+    try {
+      const params = { course: searchCourse, studyYear: searchStudyYear, department: searchDepartment };
+      if (searchDate) params.date = searchDate;
+      if (searchPeriod) params.period = searchPeriod;
+      const response = await api.get("/attendance", { params });
+      const rows = asArray(response.data);
+      setSearchedHistory(rows);
+      setMessage(rows.length ? `${rows.length} saved attendance session${rows.length === 1 ? "" : "s"} found.` : "No saved attendance matches these filters.");
+    } catch (err) {
+      setSearchedHistory([]);
+      setError(err.response?.data?.message || "Unable to search saved attendance.");
+    } finally { setSearchingHistory(false); }
   };
 
   const normalizeRosterStudent = (student) => ({
@@ -149,8 +180,10 @@ function Attendance() {
   };
 
   const loadStudents = async (selectedWeek = week, selectedPeriod = period) => {
+    if (!selectedStudyYear) return setError("Please select a study year.");
     if (!selectedDepartment) return setError("Please select a department.");
     if (!selectedCourse) return setError("Please select a course.");
+    if (!date) return setError("Please select the attendance date.");
 
     setLoading(true);
     setError("");
@@ -164,25 +197,13 @@ function Attendance() {
       const courseRoster = asArray(course?.students).filter((student) => student && student.status !== "Suspended");
 
       try {
-        const attendanceResponse = await api.get(
-          `/attendance/course/${selectedCourse}/week/${selectedWeek}?period=${selectedPeriod}`
-        );
-        const attendance = attendanceResponse.data;
-        const savedRows = asArray(attendance?.students);
-        const mergedRows = mergeRosterWithAttendance(courseRoster, savedRows);
-
-        setAttendanceId(attendance?._id || null);
-        setDate(attendance?.date ? String(attendance.date).substring(0, 10) : "");
-        setStudents(mergedRows);
-
-        const missingSavedIdentity = savedRows.some(
-          (item) => !getEntityId(item?.student) && !clean(item?.studentId) && !clean(item?.studentName)
-        );
-        if (missingSavedIdentity) {
-          setRosterWarning("An older attendance record contained a missing student reference. The current course roster has been restored so names and IDs remain usable.");
+        const existingResponse = await api.get("/attendance/check", { params: { course: selectedCourse, date, period: selectedPeriod } });
+        if (existingResponse.data?.exists) {
+          setStudents([]);
+          setAttendanceId(null);
+          setError(`Attendance already exists for this class on ${date}, Period ${selectedPeriod}. Use Saved Attendance to view or edit it.`);
+          return;
         }
-        setMessage("Saved attendance session loaded.");
-        return;
       } catch (attendanceError) {
         if (attendanceError.response?.status !== 404) throw attendanceError;
       }
@@ -190,7 +211,6 @@ function Attendance() {
       const roster = courseRoster.map(normalizeRosterStudent);
       setStudents(roster);
       setAttendanceId(null);
-      if (!date) setDate(new Date().toISOString().slice(0, 10));
 
       if (!roster.length) {
         setError("No students are enrolled in this course. Add students to the course before recording attendance.");
@@ -435,28 +455,16 @@ function Attendance() {
     if (doc) doc.save(fileName);
   };
 
-  const handleDepartmentChange = (value) => {
-    setSelectedDepartment(value);
-    setSelectedCourse("");
-    setStudents([]);
-    setHistory([]);
-    setAttendanceId(null);
-    setDate("");
-    setMessage("");
-    setError("");
-    setRosterWarning("");
+  const handleStudyYearChange = (value) => {
+    setSelectedStudyYear(value); setSelectedDepartment(""); setSelectedCourse(""); setStudents([]); setAttendanceId(null); setMessage(""); setError("");
   };
 
-  const handleCourseChange = async (courseId) => {
-    setSelectedCourse(courseId);
-    setStudents([]);
-    setAttendanceId(null);
-    setDate("");
-    setMessage("");
-    setError("");
-    setRosterWarning("");
-    if (courseId) await loadHistory(courseId);
-    else setHistory([]);
+  const handleDepartmentChange = (value) => {
+    setSelectedDepartment(value); setSelectedCourse(""); setStudents([]); setAttendanceId(null); setMessage(""); setError(""); setRosterWarning("");
+  };
+
+  const handleCourseChange = (courseId) => {
+    setSelectedCourse(courseId); setStudents([]); setAttendanceId(null); setMessage(""); setError(""); setRosterWarning("");
   };
 
   const openSavedSession = async (item, mode = "view") => {
@@ -465,6 +473,10 @@ function Attendance() {
       setError("");
       const response = await api.get(`/attendance/${item._id}`);
       const session = response.data;
+      const sessionCourse = session.course || {};
+      setSelectedStudyYear(clean(session.year || sessionCourse.studyYear));
+      setSelectedDepartment(clean(session.department || sessionCourse.department));
+      setSelectedCourse(getEntityId(sessionCourse));
       setWeek(session.week || 1);
       setPeriod(session.period || 1);
       setDate(session.date ? String(session.date).slice(0, 10) : "");
@@ -523,35 +535,33 @@ function Attendance() {
         {error && <div className="message-strip error">{error}</div>}
         {rosterWarning && <div className="message-strip warning">{rosterWarning}</div>}
 
-        <section className="ops-card">
-          <div className="ops-card-head">
-            <div><h2>Session setup</h2><p>Select the exact class meeting before opening the register.</p></div>
-            {history.length > 0 && <span className="pill pill-blue">{history.length} saved session{history.length === 1 ? "" : "s"}</span>}
+        <section className="ops-card attendance-register-setup">
+          <div className="ops-card-head"><div><span className="al-eyebrow">REGISTER ATTENDANCE</span><h2>New class attendance</h2><p>Choose the class meeting. Only then will the enrolled student register open.</p></div></div>
+          <div className="ops-filter-grid attendance-filter-grid attendance-six-filters">
+            <div className="field"><label>Study year</label><select value={selectedStudyYear} onChange={(e)=>handleStudyYearChange(e.target.value)}><option value="">Select year</option>{studyYears.map((y)=><option key={y} value={y}>{y}</option>)}</select></div>
+            <div className="field"><label>Department</label><select value={selectedDepartment} onChange={(e)=>handleDepartmentChange(e.target.value)} disabled={!selectedStudyYear}><option value="">{selectedStudyYear ? "Select department" : "Study year first"}</option>{registerDepartments.map((d)=><option key={d} value={d}>{d}</option>)}</select></div>
+            <div className="field"><label>Course</label><select value={selectedCourse} onChange={(e)=>handleCourseChange(e.target.value)} disabled={!selectedDepartment}><option value="">{selectedDepartment ? "Select course" : "Department first"}</option>{filteredCourses.map((c)=><option key={c._id} value={c._id}>{c.code} — {c.name}</option>)}</select></div>
+            <div className="field"><label>Week</label><select value={week} onChange={(e)=>setWeek(Number(e.target.value))}>{Array.from({length:16},(_,i)=><option key={i+1} value={i+1}>Week {i+1}</option>)}</select></div>
+            <div className="field"><label>Period</label><select value={period} onChange={(e)=>setPeriod(Number(e.target.value))}>{[1,2,3,4,5].map((p)=><option key={p} value={p}>Period {p}</option>)}</select></div>
+            <div className="field"><label>Date</label><input type="date" value={date} onChange={(e)=>setDate(e.target.value)}/></div>
           </div>
-          <div className="ops-filter-grid attendance-filter-grid">
-            <div className="field"><label>Department</label><select value={selectedDepartment} onChange={(e) => handleDepartmentChange(e.target.value)}><option value="">Select department</option>{DEPARTMENTS.map((department) => <option key={department} value={department}>{department}</option>)}</select></div>
-            <div className="field"><label>Course</label><select value={selectedCourse} onChange={(e) => handleCourseChange(e.target.value)} disabled={!selectedDepartment}><option value="">{selectedDepartment ? "Select course" : "Department first"}</option>{filteredCourses.map((course) => <option key={course._id} value={course._id}>{course.code} — {course.name}</option>)}</select></div>
-            <div className="field"><label>Week</label><select value={week} onChange={(e) => setWeek(Number(e.target.value))}>{Array.from({ length: 16 }, (_, index) => <option key={index + 1} value={index + 1}>Week {index + 1}</option>)}</select></div>
-            <div className="field"><label>Period</label><select value={period} onChange={(e) => setPeriod(Number(e.target.value))}>{[1, 2, 3, 4, 5].map((item) => <option key={item} value={item}>Period {item}</option>)}</select></div>
-            <div className="field"><label>Date</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-            <div className="field ops-load-field"><label>&nbsp;</label><button className="btn-compact btn-primary ops-load-btn" onClick={() => loadStudents(week, period)} disabled={loading || !selectedCourse}><FaUsers /> {loading ? "Opening…" : "Open register"}</button></div>
-          </div>
+          <div className="attendance-open-row"><span>Duplicate protection: one session per course, date and period.</span><button className="btn-compact btn-primary" onClick={()=>loadStudents(week,period)} disabled={loading || !selectedCourse || !date}><FaUsers/> {loading ? "Checking…" : "Open register"}</button></div>
         </section>
 
-        {selectedCourseData && (
-          <section className="attendance-class-strip">
-            <div><FaGraduationCap /><span>Course</span><strong>{selectedCourseData.code} — {selectedCourseData.name}</strong></div>
-            <div><FaIdCard /><span>Study year</span><strong>{selectedCourseData.studyYear || "—"}</strong></div>
-            <div><FaCalendarAlt /><span>Semester</span><strong>{selectedCourseData.semester || "—"}</strong></div>
-            <div><FaUsers /><span>Enrolled</span><strong>{asArray(selectedCourseData.students).length || students.length || "—"}</strong></div>
-          </section>
-        )}
+        {selectedCourseData && <section className="attendance-class-strip"><div><FaGraduationCap/><span>Course</span><strong>{selectedCourseData.code} — {selectedCourseData.name}</strong></div><div><FaIdCard/><span>Study year</span><strong>{selectedCourseData.studyYear || "—"}</strong></div><div><FaCalendarAlt/><span>Semester</span><strong>{selectedCourseData.semester || "—"}</strong></div><div><FaUsers/><span>Enrolled</span><strong>{asArray(selectedCourseData.students).length || students.length || "—"}</strong></div></section>}
 
-        {history.length > 0 && <section className="ops-card attendance-sessions-card">
-          <div className="ops-card-head"><div><h2><FaHistory /> Saved attendance sessions</h2><p>Each class meeting is stored as one session. View, edit or print without creating duplicates.</p></div></div>
-          <div className="data-wrap"><table className="data-table attendance-session-table"><thead><tr><th>Date</th><th>Department</th><th>Study year</th><th>Course</th><th>Students</th><th>Present</th><th>Absent</th><th>Late</th><th>Actions</th></tr></thead>
-          <tbody>{history.map((item) => { const counts=sessionCounts(item); return <tr key={item._id}><td><strong>{item.date ? String(item.date).slice(0,10) : "—"}</strong><small>W{item.week} · P{item.period || 1}</small></td><td>{item.department || item.course?.department || "—"}</td><td>{item.year || item.course?.studyYear || "—"}</td><td><strong>{item.course?.code || "—"}</strong><small>{item.course?.name || ""}</small></td><td>{counts.total}</td><td>{counts.present}</td><td>{counts.absent}</td><td>{counts.late}</td><td><div className="attendance-session-actions"><button onClick={()=>openSavedSession(item,"view")}><FaEye/> View</button><button onClick={()=>openSavedSession(item,"edit")}><FaEdit/> Edit</button><button onClick={()=>printSavedSession(item)}><FaPrint/> Print</button></div></td></tr> })}</tbody></table></div>
-        </section>}
+        <section className="ops-card attendance-sessions-card attendance-search-card">
+          <div className="ops-card-head"><div><span className="al-eyebrow">SAVED ATTENDANCE</span><h2><FaHistory/> Search attendance</h2><p>These filters are independent from Register Attendance. Search existing sessions, then view, edit or print.</p></div></div>
+          <div className="ops-filter-grid attendance-filter-grid attendance-search-grid">
+            <div className="field"><label>Study year</label><select value={searchStudyYear} onChange={(e)=>{setSearchStudyYear(e.target.value);setSearchDepartment("");setSearchCourse("");setSearchedHistory([])}}><option value="">Select year</option>{studyYears.map((y)=><option key={y} value={y}>{y}</option>)}</select></div>
+            <div className="field"><label>Department</label><select value={searchDepartment} onChange={(e)=>{setSearchDepartment(e.target.value);setSearchCourse("");setSearchedHistory([])}} disabled={!searchStudyYear}><option value="">{searchStudyYear ? "Select department" : "Study year first"}</option>{searchDepartments.map((d)=><option key={d} value={d}>{d}</option>)}</select></div>
+            <div className="field"><label>Course</label><select value={searchCourse} onChange={(e)=>{setSearchCourse(e.target.value);setSearchedHistory([])}} disabled={!searchDepartment}><option value="">{searchDepartment ? "Select course" : "Department first"}</option>{searchCourses.map((c)=><option key={c._id} value={c._id}>{c.code} — {c.name}</option>)}</select></div>
+            <div className="field"><label>Date <small>(optional)</small></label><input type="date" value={searchDate} onChange={(e)=>setSearchDate(e.target.value)}/></div>
+            <div className="field"><label>Period <small>(optional)</small></label><select value={searchPeriod} onChange={(e)=>setSearchPeriod(e.target.value)}><option value="">All periods</option>{[1,2,3,4,5].map((p)=><option key={p} value={p}>Period {p}</option>)}</select></div>
+            <div className="field ops-load-field"><label>&nbsp;</label><button className="btn-compact btn-primary ops-load-btn" onClick={searchSavedAttendance} disabled={searchingHistory || !searchCourse}><FaHistory/> {searchingHistory ? "Searching…" : "Search attendance"}</button></div>
+          </div>
+          {searchedHistory.length > 0 ? <div className="data-wrap"><table className="data-table attendance-session-table"><thead><tr><th>Date</th><th>Period</th><th>Department</th><th>Study year</th><th>Course</th><th>Students</th><th>Present</th><th>Absent</th><th>Late</th><th>Actions</th></tr></thead><tbody>{searchedHistory.map((item)=>{const counts=sessionCounts(item);return <tr key={item._id}><td><strong>{item.date ? String(item.date).slice(0,10) : "—"}</strong><small>Week {item.week}</small></td><td><strong>Period {item.period || 1}</strong></td><td>{item.department || item.course?.department || "—"}</td><td>{item.year || item.course?.studyYear || "—"}</td><td><strong>{item.course?.code || "—"}</strong><small>{item.course?.name || ""}</small></td><td>{counts.total}</td><td>{counts.present}</td><td>{counts.absent}</td><td>{counts.late}</td><td><div className="attendance-session-actions"><button onClick={()=>openSavedSession(item,"view")}><FaEye/> View</button><button onClick={()=>openSavedSession(item,"edit")}><FaEdit/> Edit</button><button onClick={()=>printSavedSession(item)}><FaPrint/> Print</button></div></td></tr>})}</tbody></table></div> : <div className="attendance-search-empty">Choose the saved-attendance filters and press <strong>Search attendance</strong>.</div>}
+        </section>
 
         {students.length > 0 ? <>
           <div className="ops-metrics">
@@ -593,7 +603,7 @@ function Attendance() {
               <div className="attendance-save-actions"><button className="btn-compact btn-soft" onClick={() => { setStudents([]); setAttendanceId(null); setRegisterMode("edit"); }} type="button">Close</button>{registerMode === "edit" && <button className="btn-compact btn-primary" onClick={saveAttendance} disabled={saving}><FaSave /> {saving ? "Saving…" : attendanceId ? "Update attendance" : "Save attendance"}</button>}</div>
             </div>
           </section>
-        </> : <section className="ops-empty"><FaClipboardCheck /><div><strong>No register open</strong><span>Select department, course, week and period, then open the register.</span></div></section>}
+        </> : <section className="ops-empty"><FaClipboardCheck /><div><strong>No register open</strong><span>Select study year, department, course, date and period, then open the register.</span></div></section>}
       </div>
     </Layout>
   );

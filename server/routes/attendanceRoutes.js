@@ -3,6 +3,7 @@ import express from "express";
 import {
   getAttendance,
   getAttendanceById,
+  checkAttendanceSession,
   getAttendanceByCourseWeek,
   getAttendanceHistory,
   createAttendance,
@@ -23,6 +24,7 @@ router.use(protect);
 
 // Admins and instructors may review attendance data.
 router.get("/", authorize("Admin", "Instructor"), getAttendance);
+router.get("/check", authorize("Admin", "Instructor"), checkAttendanceSession);
 router.get(
   "/statistics/:courseId",
   authorize("Admin", "Instructor"),

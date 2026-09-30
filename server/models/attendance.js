@@ -70,16 +70,8 @@ const attendanceSchema = new mongoose.Schema(
 );
 
 attendanceSchema.index(
-  {
-    department: 1,
-    year: 1,
-    course: 1,
-    week: 1,
-    period: 1,
-  },
-  {
-    unique: true,
-  }
+  { course: 1, date: 1, period: 1 },
+  { unique: true, name: "attendance_course_date_period_unique" }
 );
 
 export default mongoose.model("Attendance", attendanceSchema);
