@@ -14,6 +14,7 @@ import courseRoutes from "./routes/courseRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import assessmentRoutes from "./routes/assessmentRoutes.js";
+import assessmentTemplateRoutes from "./routes/assessmentTemplateRoutes.js";
 import learningMaterialRoutes from "./routes/learningMaterialRoutes.js";
 import announcementRoutes from "./routes/announcementRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
@@ -165,6 +166,8 @@ app.use(
   "/api/assessment",
   assessmentRoutes
 );
+
+app.use("/api/assessment-templates", assessmentTemplateRoutes);
 
 app.use(
   "/api/learning-materials",

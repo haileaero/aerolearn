@@ -42,6 +42,8 @@ const scoreSchema = new mongoose.Schema(
 const assessmentSchema =
   new mongoose.Schema(
     {
+      template: { type: mongoose.Schema.Types.ObjectId, ref: "AssessmentTemplate", default: null },
+
       course: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Course",

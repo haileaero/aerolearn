@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   FaChartBar,
@@ -55,20 +55,31 @@ function Assessment() {
   const [studyYearFilter, setStudyYearFilter] = useState("All");
   const [departmentFilter, setDepartmentFilter] = useState("All");
   const [selectedId, setSelectedId] = useState(legacyId || "");
+  const [expandedCourseId, setExpandedCourseId] = useState("");
   const [deskTab, setDeskTab] = useState("scores");
   const [scoreSearch, setScoreSearch] = useState("");
   const [scores, setScores] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [form, setForm] = useState(initialForm);
+  const [templates, setTemplates] = useState([]);
+  const [templateName, setTemplateName] = useState("");
+  const [templateComponents, setTemplateComponents] = useState([
+    { title: "Quiz 1", category: "Quiz", weight: 10, week: 3 },
+    { title: "Assignment 1", category: "Assignment", weight: 10, week: 6 },
+    { title: "Final Exam", category: "Final Exam", weight: 80, week: 16 },
+  ]);
+  const [assignTemplate, setAssignTemplate] = useState("");
+  const [assignCourse, setAssignCourse] = useState("");
 
   const loadData = async () => {
     try {
       setLoading(true);
       setError("");
-      const [courseRes, assessmentRes] = await Promise.all([
+      const [courseRes, assessmentRes, templateRes] = await Promise.all([
         api.get("/courses?limit=200"),
         api.get("/assessment"),
+        api.get("/assessment-templates"),
       ]);
       setCourses(
         Array.isArray(courseRes.data?.courses)
@@ -78,6 +89,7 @@ function Assessment() {
             : []
       );
       setAssessments(asArray(assessmentRes.data));
+      setTemplates(asArray(templateRes.data));
     } catch (err) {
       setError(err.response?.data?.message || "Unable to load assessment data.");
     } finally {
@@ -118,6 +130,23 @@ function Assessment() {
       ...(name === "category" ? { title: "" } : {}),
     }));
   };
+
+
+  const templateTotal = templateComponents.reduce((sum, item) => sum + Number(item.weight || 0), 0);
+  const addTemplateComponent = () => setTemplateComponents((prev) => [...prev, { title: `Quiz ${prev.length + 1}`, category: "Quiz", weight: 10, week: 1 }]);
+  const updateTemplateComponent = (index, key, value) => setTemplateComponents((prev) => prev.map((item, i) => i === index ? { ...item, [key]: value } : item));
+  const removeTemplateComponent = (index) => setTemplateComponents((prev) => prev.filter((_, i) => i !== index));
+  const saveTemplate = async () => {
+    if (!templateName.trim() || templateTotal !== 100 || !templateComponents.length) { toast("Give the assessment type a name and make the weights total exactly 100%.", "error"); return; }
+    try { setSaving(true); await api.post("/assessment-templates", { name: templateName.trim(), components: templateComponents }); setTemplateName(""); toast("Assessment type saved."); await loadData(); }
+    catch (err) { toast(err.response?.data?.message || "Unable to save assessment type.", "error"); } finally { setSaving(false); }
+  };
+  const applyTemplate = async () => {
+    if (!assignTemplate || !assignCourse) { toast("Choose an assessment type and a course.", "error"); return; }
+    try { setSaving(true); const response = await api.post(`/assessment-templates/${assignTemplate}/assign`, { courseId: assignCourse }); toast(response.data?.message || "Assessment type assigned."); setAssignCourse(""); await loadData(); }
+    catch (err) { toast(err.response?.data?.message || "Unable to assign assessment type.", "error"); } finally { setSaving(false); }
+  };
+  const removeTemplate = async (id) => { const ok = await confirm({title:"Delete assessment type?",message:"Existing course assessments will stay unchanged.",confirmText:"Delete type"}); if(!ok)return; try{await api.delete(`/assessment-templates/${id}`); await loadData(); toast("Assessment type deleted.");}catch(err){toast(err.response?.data?.message||"Unable to delete assessment type.","error");} };
 
   const saveAssessment = async (event) => {
     event.preventDefault();
@@ -202,6 +231,16 @@ function Assessment() {
     }),
     [assessments, courses, search, studyYearFilter, departmentFilter, categoryFilter, courseFilter]
   );
+
+  const groupedPlans = useMemo(() => {
+    const map = new Map();
+    for (const item of filtered) {
+      const id = courseIdOf(item.course) || "unassigned";
+      if (!map.has(id)) map.set(id, { id, course: item.course, items: [] });
+      map.get(id).items.push(item);
+    }
+    return [...map.values()];
+  }, [filtered]);
 
   const titleOptions =
     form.category === "Quiz"
@@ -304,7 +343,7 @@ function Assessment() {
             <p>Create assessments, enter scores and review results without leaving this workspace.</p>
           </div>
           <button className={`assessment-new-btn ${showCreate ? "close" : ""}`} onClick={() => setShowCreate((value) => !value)}>
-            {showCreate ? <><FaTimes /> Close</> : <><FaPlus /> New assessment</>}
+            {showCreate ? <><FaTimes /> Close</> : <><FaPlus /> Custom assessment</>}
           </button>
         </header>
 
@@ -322,6 +361,17 @@ function Assessment() {
         {assessments.some((item) => !courseIdOf(item.course)) && (
           <div className="message-strip warning">Some older assessment records are missing their course link. They remain visible as “Unassigned” and will no longer crash this page.</div>
         )}
+
+        <section className="assessment-template-studio">
+          <div className="template-studio-head"><div><span className="al-eyebrow">REUSABLE ASSESSMENT TYPES</span><h2>Assessment type library</h2><p>Build the grading structure once, then assign it to any course.</p></div><strong className={templateTotal === 100 ? "template-total good" : "template-total"}>{templateTotal}% / 100%</strong></div>
+          <div className="template-builder">
+            <div className="template-name-row"><input value={templateName} onChange={(e)=>setTemplateName(e.target.value)} placeholder="Type name, e.g. Quiz + Assignment + Final"/><button type="button" onClick={addTemplateComponent}><FaPlus/> Component</button></div>
+            <div className="template-component-list">{templateComponents.map((component,index)=><div className="template-component-row" key={index}><select value={component.category} onChange={(e)=>updateTemplateComponent(index,"category",e.target.value)}><option>Quiz</option><option>Assignment</option><option>Lab</option><option>Project</option><option>Mid Exam</option><option>Final Exam</option></select><input value={component.title} onChange={(e)=>updateTemplateComponent(index,"title",e.target.value)} placeholder="Name"/><label>Week <input type="number" min="1" max="52" value={component.week} onChange={(e)=>updateTemplateComponent(index,"week",e.target.value)}/></label><label>Weight <input type="number" min="1" max="100" value={component.weight} onChange={(e)=>updateTemplateComponent(index,"weight",e.target.value)}/>%</label><button className="template-remove" type="button" onClick={()=>removeTemplateComponent(index)}><FaTrash/></button></div>)}</div>
+            <button className="template-save" type="button" disabled={saving || templateTotal !== 100 || !templateName.trim()} onClick={saveTemplate}><FaSave/> Save assessment type</button>
+          </div>
+          <div className="template-library">{templates.map(t=><article key={t._id}><div><strong>{t.name}</strong><span>{asArray(t.components).map(c=>`${c.title} ${c.weight}%`).join(" · ")}</span></div><button onClick={()=>removeTemplate(t._id)} title="Delete type"><FaTrash/></button></article>)}{!templates.length&&<p className="template-empty">No saved assessment types yet.</p>}</div>
+          <div className="template-assign"><select value={assignTemplate} onChange={(e)=>setAssignTemplate(e.target.value)}><option value="">Choose assessment type</option>{templates.map(t=><option key={t._id} value={t._id}>{t.name}</option>)}</select><select value={assignCourse} onChange={(e)=>setAssignCourse(e.target.value)}><option value="">Choose assigned course</option>{courses.map(c=><option key={c._id} value={c._id}>{c.code} — {c.name} · {c.department}</option>)}</select><button onClick={applyTemplate} disabled={saving || !assignTemplate || !assignCourse}>Apply to course</button></div>
+        </section>
 
         {showCreate && (
           <section className="assessment-create-onepage">
@@ -356,7 +406,7 @@ function Assessment() {
 
         <section className="assessment-plan-onepage">
           <div className="assessment-plan-toolbar">
-            <div><h2>Assessment plan</h2><span>Select Manage to work with scores and results below.</span></div>
+            <div><h2>Assessment plan</h2><span>Courses are grouped below. Choose a course, then manage its assessment components.</span></div>
             <div className="assessment-tools">
               <div className="assessment-search"><FaSearch /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" /></div>
               <div className="assessment-filter"><FaFilter /><select value={studyYearFilter} onChange={(e) => { setStudyYearFilter(e.target.value); setDepartmentFilter("All"); setCourseFilter("All"); }}><option value="All">All study years</option>{studyYears.map((year) => <option key={year} value={year}>{year}</option>)}</select></div>
@@ -372,24 +422,24 @@ function Assessment() {
             <div className="assessment-empty"><FaClipboardList /><strong>No assessments found</strong><span>Create one or change the filters.</span></div>
           ) : (
             <div className="assessment-table-wrap">
-              <table className="assessment-table onepage-plan-table">
-                <thead><tr><th>Assessment</th><th>When</th><th>Contribution</th><th>Progress</th><th>Class avg.</th><th>Manage</th></tr></thead>
+              <table className="assessment-table onepage-plan-table course-plan-table">
+                <thead><tr><th>Course</th><th>Assessment structure</th><th>Components</th><th>Total</th><th>Manage</th></tr></thead>
                 <tbody>
-                  {filtered.map((item) => {
-                    const itemScores = asArray(item.scores);
-                    const entered = itemScores.filter(scoreIsEntered);
-                    const courseMeta = courseLabelOf(item.course, courses);
-                    const average = entered.length ? entered.reduce((sum, score) => sum + (Number(score.score) || 0), 0) / entered.length : 0;
-                    return (
-                      <tr key={item._id} className={selectedId === item._id ? "selected" : ""}>
-                        <td><div className="assessment-name-cell"><span className={`pill ${categoryPill(item.category)}`}>{item.category}</span><div><strong>{item.title}</strong><small>{`${courseMeta.code} · ${courseMeta.name}${courseMeta.department ? ` · ${courseMeta.department}` : ""}`}</small></div></div></td>
-                        <td><div className="assessment-date-cell"><strong>Week {item.week}</strong><span>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</span></div></td>
-                        <td><span className="weight-chip">{item.weight}%</span></td>
-                        <td><div className="plan-progress"><strong>{entered.length}/{itemScores.length}</strong><span>{entered.length === itemScores.length && itemScores.length ? "Complete" : "Entered"}</span></div></td>
-                        <td><strong className="class-average-cell">{entered.length ? `${average.toFixed(1)}%` : "—"}</strong></td>
-                        <td><div className="assessment-row-actions"><button className="manage-action" onClick={() => openDesk(item._id, "scores")}>Manage</button><button className="delete-action" onClick={() => deleteAssessment(item._id)} title="Delete assessment"><FaTrash /></button></div></td>
+                  {groupedPlans.map((group) => {
+                    const courseMeta = courseLabelOf(group.course, courses);
+                    const totalWeight = group.items.reduce((sum,item)=>sum+Number(item.weight||0),0);
+                    const complete = group.items.filter(item => asArray(item.scores).length > 0 && asArray(item.scores).every(scoreIsEntered)).length;
+                    const expanded = expandedCourseId === group.id;
+                    return <Fragment key={group.id}>
+                      <tr className={expanded ? "selected" : ""}>
+                        <td><strong>{courseMeta.code}</strong><small className="course-plan-sub">{courseMeta.name}{courseMeta.department ? ` · ${courseMeta.department}` : ""}</small></td>
+                        <td><span className="pill pill-blue">Course plan</span><small className="course-plan-sub">{complete}/{group.items.length} components scored</small></td>
+                        <td><strong>{group.items.length}</strong><small className="course-plan-sub">{group.items.map(i=>i.title).join(" · ")}</small></td>
+                        <td><span className={`weight-chip ${totalWeight===100?"complete":""}`}>{totalWeight}%</span></td>
+                        <td><button className="manage-action" onClick={()=>setExpandedCourseId(expanded ? "" : group.id)}>{expanded ? "Close" : "Manage"}</button></td>
                       </tr>
-                    );
+                      {expanded && <tr className="course-plan-components-row"><td colSpan="5"><div className="course-plan-components">{group.items.map(item=>{const entered=asArray(item.scores).filter(scoreIsEntered).length;return <article key={item._id}><span className={`pill ${categoryPill(item.category)}`}>{item.category}</span><div><strong>{item.title}</strong><small>Week {item.week} · {item.weight}% · {entered}/{asArray(item.scores).length} entered</small></div><button onClick={()=>openDesk(item._id,"scores")}>Enter / edit scores</button><button className="delete-action" onClick={()=>deleteAssessment(item._id)}><FaTrash/></button></article>})}</div></td></tr>}
+                    </Fragment>;
                   })}
                 </tbody>
               </table>
