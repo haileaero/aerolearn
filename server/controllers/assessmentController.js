@@ -2,6 +2,45 @@ import Assessment from "../models/assessment.js";
 import Course from "../models/course.js";
 import Student from "../models/student.js";
 
+const rosterFilterForCourse = (course) => ({
+  status: "Active",
+  department: course.department,
+  year: course.studyYear,
+  semester: course.semester,
+});
+
+const syncAssessmentRoster = async (assessment) => {
+  const course = assessment.course && typeof assessment.course === "object" ? assessment.course : null;
+  if (!course?._id) return assessment;
+
+  const [matching, linked] = await Promise.all([
+    Student.find(rosterFilterForCourse(course)).select("_id").lean(),
+    Student.find({
+      status: "Active",
+      $or: [{ courses: course._id }, { _id: { $in: course.students || [] } }],
+    }).select("_id").lean(),
+  ]);
+  const rosterIds = [...new Set([...matching, ...linked].map((student) => String(student._id)))];
+  const existing = new Map((assessment.scores || []).filter((row) => row.student).map((row) => [String(row.student._id || row.student), row]));
+  let changed = false;
+
+  assessment.scores = rosterIds.map((studentId) => {
+    const row = existing.get(studentId);
+    if (row) return row;
+    changed = true;
+    return { student: studentId, score: 0, entered: false, remark: "" };
+  });
+  if (assessment.scores.length !== existing.size) changed = true;
+  if (changed) {
+    await Assessment.updateOne({ _id: assessment._id }, { $set: { scores: assessment.scores.map((row) => ({
+      student: row.student?._id || row.student, score: row.score || 0, entered: row.entered === true, remark: row.remark || ""
+    })) } });
+    await assessment.populate("scores.student", "studentId fullName department");
+  }
+  assessment.scores = (assessment.scores || []).filter((row) => row.student);
+  return assessment;
+};
+
 /* ============================================================
    GET ALL ASSESSMENTS
 ============================================================ */
@@ -39,7 +78,7 @@ export const getAssessments = async (
     // Populated score rows whose Student document no longer exists have
     // student=null. Never expose/count those stale rows in instructor/admin UI.
     for (const assessment of assessments) {
-      assessment.scores = (assessment.scores || []).filter((row) => row.student);
+      await syncAssessmentRoster(assessment);
     }
 
     res.status(200).json(
@@ -96,7 +135,7 @@ export const getAssessmentById =
 
       }
 
-      assessment.scores = (assessment.scores || []).filter((row) => row.student);
+      await syncAssessmentRoster(assessment);
 
       res.status(200).json(
         assessment

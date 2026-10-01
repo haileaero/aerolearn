@@ -1,10 +1,11 @@
 import express from "express";
 import { protect, authorize } from "../middleware/authMiddleware.js";
-import { getAssessmentTemplates, createAssessmentTemplate, deleteAssessmentTemplate, assignAssessmentTemplate } from "../controllers/assessmentTemplateController.js";
+import { getAssessmentTemplates, createAssessmentTemplate, deleteAssessmentTemplate, assignAssessmentTemplate, deleteCourseAssessmentPlan } from "../controllers/assessmentTemplateController.js";
 const router=express.Router();
 router.use(protect,authorize("Admin","Instructor"));
 router.get("/",getAssessmentTemplates);
 router.post("/",createAssessmentTemplate);
 router.post("/:id/assign",assignAssessmentTemplate);
+router.delete("/course/:courseId/plan",deleteCourseAssessmentPlan);
 router.delete("/:id",deleteAssessmentTemplate);
 export default router;

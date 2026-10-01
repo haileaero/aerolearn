@@ -147,6 +147,21 @@ function Assessment() {
     catch (err) { toast(err.response?.data?.message || "Unable to assign assessment type.", "error"); } finally { setSaving(false); }
   };
   const removeTemplate = async (id) => { const ok = await confirm({title:"Delete assessment type?",message:"Existing course assessments will stay unchanged.",confirmText:"Delete type"}); if(!ok)return; try{await api.delete(`/assessment-templates/${id}`); await loadData(); toast("Assessment type deleted.");}catch(err){toast(err.response?.data?.message||"Unable to delete assessment type.","error");} };
+  const deleteCoursePlan = async (courseId, courseCode) => {
+    const ok = await confirm({
+      title: "Delete course assessment plan?",
+      message: `This removes all assessment components and entered scores for ${courseCode}. The reusable assessment type will remain available.`,
+      confirmText: "Delete plan",
+    });
+    if (!ok) return;
+    try {
+      await api.delete(`/assessment-templates/course/${courseId}/plan`);
+      if (selectedAssessment && courseIdOf(selectedAssessment.course) === courseId) setSelectedId("");
+      if (expandedCourseId === courseId) setExpandedCourseId("");
+      await loadData();
+      toast("Course assessment plan deleted. You can assign another assessment type.");
+    } catch (err) { toast(err.response?.data?.message || "Unable to delete course assessment plan.", "error"); }
+  };
 
   const saveAssessment = async (event) => {
     event.preventDefault();
@@ -254,7 +269,7 @@ function Assessment() {
             : [form.category];
 
   const stats = {
-    total: assessments.length,
+    total: templates.length,
     open: assessments.filter((item) => asArray(item.scores).some((score) => !scoreIsEntered(score))).length,
     complete: assessments.filter((item) => asArray(item.scores).length > 0 && asArray(item.scores).every(scoreIsEntered)).length,
   };
@@ -342,13 +357,11 @@ function Assessment() {
             <h1>Assessment</h1>
             <p>Create assessments, enter scores and review results without leaving this workspace.</p>
           </div>
-          <button className={`assessment-new-btn ${showCreate ? "close" : ""}`} onClick={() => setShowCreate((value) => !value)}>
-            {showCreate ? <><FaTimes /> Close</> : <><FaPlus /> Custom assessment</>}
-          </button>
+
         </header>
 
         <div className="assessment-hub-kpis">
-          <div><span className="blue"><FaClipboardList /></span><strong>{stats.total}</strong><small>Assessments</small></div>
+          <div><span className="blue"><FaClipboardList /></span><strong>{stats.total}</strong><small>Assessment Types</small></div>
           <div><span className="amber"><FaClipboardCheck /></span><strong>{stats.open}</strong><small>Need scores</small></div>
           <div><span className="green"><FaCheckCircle /></span><strong>{stats.complete}</strong><small>Complete</small></div>
           <div className={`weight-health ${courseWeight === 100 ? "good" : courseWeight > 100 ? "bad" : ""}`}>
@@ -373,36 +386,6 @@ function Assessment() {
           <div className="template-assign"><select value={assignTemplate} onChange={(e)=>setAssignTemplate(e.target.value)}><option value="">Choose assessment type</option>{templates.map(t=><option key={t._id} value={t._id}>{t.name}</option>)}</select><select value={assignCourse} onChange={(e)=>setAssignCourse(e.target.value)}><option value="">Choose assigned course</option>{courses.map(c=><option key={c._id} value={c._id}>{c.code} — {c.name} · {c.department}</option>)}</select><button onClick={applyTemplate} disabled={saving || !assignTemplate || !assignCourse}>Apply to course</button></div>
         </section>
 
-        {showCreate && (
-          <section className="assessment-create-onepage">
-            <div className="create-onepage-head">
-              <div><span>CREATE</span><h2>New assessment</h2></div>
-              <p>Course determines the department. Scores use the standard 0–100 scale.</p>
-            </div>
-            <form onSubmit={saveAssessment}>
-              <div className="create-onepage-grid">
-                <div className="field course-field"><label>Course</label><select name="course" value={form.course} onChange={handleChange} required><option value="">Select course</option>{courses.map((course) => <option key={course._id} value={course._id}>{course.code} — {course.name} · {course.department}</option>)}</select></div>
-                <div className="field"><label>Type</label><select name="category" value={form.category} onChange={handleChange}><option>Quiz</option><option>Assignment</option><option>Lab</option><option>Project</option><option>Mid Exam</option><option>Final Exam</option></select></div>
-                <div className="field"><label>Name</label><select name="title" value={form.title} onChange={handleChange} required><option value="">Select name</option>{titleOptions.map((title) => <option key={title}>{title}</option>)}</select></div>
-                <div className="field"><label>Week</label><input type="number" name="week" min="1" max="52" value={form.week} onChange={handleChange} required /></div>
-                <div className="field"><label>Due date</label><input type="date" name="dueDate" value={form.dueDate} onChange={handleChange} required /></div>
-                <div className="field"><label>Contribution</label><div className="weight-input-wrap"><input type="number" name="weight" min="1" max="100" value={form.weight} onChange={handleChange} required /><span>%</span></div></div>
-                <div className="field note-field"><label>Optional note</label><input name="description" value={form.description} onChange={handleChange} placeholder="Instructions or short description" /></div>
-              </div>
-              <div className="assessment-create-actions">
-                <span>{form.course ? "Ready to create this assessment. Student enrollment is not required." : "Select a course to continue."}</span>
-                <button type="submit" className="create-onepage-submit" disabled={saving || !form.course || !form.title || !form.dueDate}><FaSave /> {saving ? "Saving assessment…" : "Save assessment"}</button>
-              </div>
-              {form.course && (
-                <div className={`contribution-preview ${formCourseWeight + Number(form.weight || 0) > 100 ? "over" : formCourseWeight + Number(form.weight || 0) === 100 ? "complete" : ""}`}>
-                  <span>Course contribution after creation</span>
-                  <strong>{formCourseWeight + Number(form.weight || 0)}%</strong>
-                  <div><i style={{ width: `${Math.min(formCourseWeight + Number(form.weight || 0), 100)}%` }} /></div>
-                </div>
-              )}
-            </form>
-          </section>
-        )}
 
         <section className="assessment-plan-onepage">
           <div className="assessment-plan-toolbar">
@@ -423,7 +406,7 @@ function Assessment() {
           ) : (
             <div className="assessment-table-wrap">
               <table className="assessment-table onepage-plan-table course-plan-table">
-                <thead><tr><th>Course</th><th>Assessment structure</th><th>Components</th><th>Total</th><th>Manage</th></tr></thead>
+                <thead><tr><th>Course</th><th>Assessment structure</th><th>Components</th><th>Total</th><th>Actions</th></tr></thead>
                 <tbody>
                   {groupedPlans.map((group) => {
                     const courseMeta = courseLabelOf(group.course, courses);
@@ -436,9 +419,9 @@ function Assessment() {
                         <td><span className="pill pill-blue">Course plan</span><small className="course-plan-sub">{complete}/{group.items.length} components scored</small></td>
                         <td><strong>{group.items.length}</strong><small className="course-plan-sub">{group.items.map(i=>i.title).join(" · ")}</small></td>
                         <td><span className={`weight-chip ${totalWeight===100?"complete":""}`}>{totalWeight}%</span></td>
-                        <td><button className="manage-action" onClick={()=>setExpandedCourseId(expanded ? "" : group.id)}>{expanded ? "Close" : "Manage"}</button></td>
+                        <td><div className="course-plan-actions"><button className="manage-action" onClick={()=>setExpandedCourseId(expanded ? "" : group.id)}>{expanded ? "Close" : "Manage"}</button><button className="delete-plan-action" onClick={()=>deleteCoursePlan(group.id, courseMeta.code)}><FaTrash /> Delete</button></div></td>
                       </tr>
-                      {expanded && <tr className="course-plan-components-row"><td colSpan="5"><div className="course-plan-components">{group.items.map(item=>{const entered=asArray(item.scores).filter(scoreIsEntered).length;return <article key={item._id}><span className={`pill ${categoryPill(item.category)}`}>{item.category}</span><div><strong>{item.title}</strong><small>Week {item.week} · {item.weight}% · {entered}/{asArray(item.scores).length} entered</small></div><button onClick={()=>openDesk(item._id,"scores")}>Enter / edit scores</button><button className="delete-action" onClick={()=>deleteAssessment(item._id)}><FaTrash/></button></article>})}</div></td></tr>}
+                      {expanded && <tr className="course-plan-components-row"><td colSpan="5"><div className="course-plan-components">{group.items.map(item=>{const entered=asArray(item.scores).filter(scoreIsEntered).length;return <article key={item._id}><span className={`pill ${categoryPill(item.category)}`}>{item.category}</span><div><strong>{item.title}</strong><small>Week {item.week} · {item.weight}% · {entered}/{asArray(item.scores).length} entered</small></div><button onClick={()=>openDesk(item._id,"scores")}>Enter / edit scores</button></article>})}</div></td></tr>}
                     </Fragment>;
                   })}
                 </tbody>

@@ -29,11 +29,28 @@ export const assignAssessmentTemplate = async (req,res) => {
     if(!allowedCourse(course,req.user))return res.status(403).json({message:"You can only assign assessment types to courses assigned to you."});
     const existing=await Assessment.countDocuments({course:course._id});
     if(existing>0)return res.status(400).json({message:"This course already has an assessment plan. Remove or keep the existing plan before assigning a template."});
-    const students=await Student.find({$or:[{courses:course._id},{_id:{$in:course.students||[]}}],status:"Active"}).select("_id");
+    const students=await Student.find({
+      status:"Active",
+      $or:[
+        {courses:course._id},
+        {_id:{$in:course.students||[]}},
+        {department:course.department,year:course.studyYear,semester:course.semester}
+      ]
+    }).select("_id");
     const scores=students.map(s=>({student:s._id,score:0,entered:false,remark:""}));
     const baseDate=new Date();
     const docs=template.components.map(c=>({course:course._id,title:c.title,category:c.category,week:c.week||1,dueDate:new Date(baseDate.getTime()+Math.max((c.week||1)-1,0)*7*86400000),totalMark:Number(c.weight),weight:Number(c.weight),description:c.description||`From assessment type: ${template.name}`,template:template._id,scores}));
     const created=await Assessment.insertMany(docs);
     res.status(201).json({message:`${template.name} assigned to ${course.code}.`,count:created.length});
   } catch(e){ res.status(400).json({message:e.message||"Failed to assign assessment type."}); }
+};
+
+export const deleteCourseAssessmentPlan = async (req,res) => {
+  try {
+    const course=await Course.findById(req.params.courseId);
+    if(!course)return res.status(404).json({message:"Course not found."});
+    if(!allowedCourse(course,req.user))return res.status(403).json({message:"You can only delete assessment plans for courses assigned to you."});
+    const result=await Assessment.deleteMany({course:course._id});
+    res.json({message:`Assessment plan removed from ${course.code}. You can now assign another assessment type.`,deleted:result.deletedCount});
+  } catch(e){res.status(500).json({message:e.message||"Failed to delete course assessment plan."});}
 };
