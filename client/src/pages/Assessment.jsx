@@ -138,6 +138,12 @@ function Assessment() {
   const removeTemplateComponent = (index) => setTemplateComponents((prev) => prev.filter((_, i) => i !== index));
   const saveTemplate = async () => {
     if (!templateName.trim() || templateTotal !== 100 || !templateComponents.length) { toast("Give the assessment type a name and make the weights total exactly 100%.", "error"); return; }
+    const componentKeys = new Set();
+    for (const component of templateComponents) {
+      const key = `${String(component.title || "").trim().toLowerCase()}::${Number(component.week || 1)}`;
+      if (componentKeys.has(key)) { toast(`Duplicate component “${component.title}” in week ${component.week || 1}. Change its name or week.`, "error"); return; }
+      componentKeys.add(key);
+    }
     try { setSaving(true); await api.post("/assessment-templates", { name: templateName.trim(), components: templateComponents }); setTemplateName(""); toast("Assessment type saved."); await loadData(); }
     catch (err) { toast(err.response?.data?.message || "Unable to save assessment type.", "error"); } finally { setSaving(false); }
   };

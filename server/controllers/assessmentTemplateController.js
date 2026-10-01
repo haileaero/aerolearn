@@ -11,9 +11,16 @@ export const getAssessmentTemplates = async (req,res) => {
 };
 export const createAssessmentTemplate = async (req,res) => {
   try {
-    const total=(req.body.components||[]).reduce((s,c)=>s+Number(c.weight||0),0);
+    const components=req.body.components||[];
+    const total=components.reduce((s,c)=>s+Number(c.weight||0),0);
     if(total!==100) return res.status(400).json({message:`Assessment type must total 100%. Current total is ${total}%.`});
-    const doc=await AssessmentTemplate.create({name:req.body.name,description:req.body.description||"",components:req.body.components,createdBy:req.user._id});
+    const componentKeys=new Set();
+    for(const component of components){
+      const key=`${String(component.title||"").trim().toLowerCase()}::${Number(component.week||1)}`;
+      if(componentKeys.has(key)) return res.status(400).json({message:`Duplicate component “${component.title}” in week ${component.week||1}. Give each component a unique name or week.`});
+      componentKeys.add(key);
+    }
+    const doc=await AssessmentTemplate.create({name:req.body.name,description:req.body.description||"",components,createdBy:req.user._id});
     res.status(201).json(doc);
   } catch(e){ res.status(400).json({message:e.message||"Failed to create assessment type."}); }
 };
@@ -27,15 +34,23 @@ export const assignAssessmentTemplate = async (req,res) => {
     if(!template)return res.status(404).json({message:"Assessment type not found."});
     if(!course)return res.status(404).json({message:"Course not found."});
     if(!allowedCourse(course,req.user))return res.status(403).json({message:"You can only assign assessment types to courses assigned to you."});
-    // A course may have only one active plan. This check intentionally uses
-    // the course ObjectId itself, independent of whether the original template
-    // still exists. The client hides these courses from the assignment picker.
-    const existing=await Assessment.countDocuments({course:course._id});
-    if(existing>0)return res.status(409).json({
-      message:"This course already has an assessment plan. Delete the existing course plan before assigning another type.",
-      courseId:String(course._id),
-      existingComponents:existing,
-    });
+    // A course may have only one complete plan. Recover automatically from the
+    // partial insert left by older versions when a duplicate component caused
+    // MongoDB E11000 midway through template assignment.
+    const existingDocs=await Assessment.find({course:course._id}).select("template weight");
+    if(existingDocs.length){
+      const sameTemplate=existingDocs.every(item=>String(item.template||"")===String(template._id));
+      const existingWeight=existingDocs.reduce((sum,item)=>sum+Number(item.weight||0),0);
+      if(sameTemplate && existingWeight<100){
+        await Assessment.deleteMany({course:course._id});
+      }else{
+        return res.status(409).json({
+          message:"This course already has an assessment plan. Delete the existing course plan before assigning another type.",
+          courseId:String(course._id),
+          existingComponents:existingDocs.length,
+        });
+      }
+    }
     const students=await Student.find({
       status:"Active",
       $or:[
@@ -46,8 +61,28 @@ export const assignAssessmentTemplate = async (req,res) => {
     }).select("_id");
     const scores=students.map(s=>({student:s._id,score:0,entered:false,remark:""}));
     const baseDate=new Date();
-    const docs=template.components.map(c=>({course:course._id,title:c.title,category:c.category,week:c.week||1,dueDate:new Date(baseDate.getTime()+Math.max((c.week||1)-1,0)*7*86400000),totalMark:Number(c.weight),weight:Number(c.weight),description:c.description||`From assessment type: ${template.name}`,template:template._id,scores}));
-    const created=await Assessment.insertMany(docs);
+    // Legacy templates could contain the same title/week more than once. MongoDB
+    // requires course+title+week to be unique, so make those old components
+    // deterministic and unique during assignment (e.g. Assignment 1 (2)).
+    const usedKeys=new Map();
+    const docs=template.components.map(c=>{
+      const week=Number(c.week||1);
+      const baseTitle=String(c.title||c.category||"Assessment").trim();
+      const key=`${baseTitle.toLowerCase()}::${week}`;
+      const occurrence=(usedKeys.get(key)||0)+1;
+      usedKeys.set(key,occurrence);
+      const title=occurrence===1?baseTitle:`${baseTitle} (${occurrence})`;
+      return {course:course._id,title,category:c.category,week,dueDate:new Date(baseDate.getTime()+Math.max(week-1,0)*7*86400000),totalMark:Number(c.weight),weight:Number(c.weight),description:c.description||`From assessment type: ${template.name}`,template:template._id,scores};
+    });
+    let created;
+    try{
+      created=await Assessment.insertMany(docs);
+    }catch(insertError){
+      // insertMany can leave earlier documents behind on a duplicate-key error.
+      // Roll back this template assignment so the course never becomes falsely blocked.
+      await Assessment.deleteMany({course:course._id,template:template._id});
+      throw insertError;
+    }
     res.status(201).json({message:`${template.name} assigned to ${course.code}.`,count:created.length});
   } catch(e){ res.status(400).json({message:e.message||"Failed to assign assessment type."}); }
 };
