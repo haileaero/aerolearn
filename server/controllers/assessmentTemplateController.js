@@ -27,8 +27,15 @@ export const assignAssessmentTemplate = async (req,res) => {
     if(!template)return res.status(404).json({message:"Assessment type not found."});
     if(!course)return res.status(404).json({message:"Course not found."});
     if(!allowedCourse(course,req.user))return res.status(403).json({message:"You can only assign assessment types to courses assigned to you."});
+    // A course may have only one active plan. This check intentionally uses
+    // the course ObjectId itself, independent of whether the original template
+    // still exists. The client hides these courses from the assignment picker.
     const existing=await Assessment.countDocuments({course:course._id});
-    if(existing>0)return res.status(400).json({message:"This course already has an assessment plan. Remove or keep the existing plan before assigning a template."});
+    if(existing>0)return res.status(409).json({
+      message:"This course already has an assessment plan. Delete the existing course plan before assigning another type.",
+      courseId:String(course._id),
+      existingComponents:existing,
+    });
     const students=await Student.find({
       status:"Active",
       $or:[
@@ -51,6 +58,14 @@ export const deleteCourseAssessmentPlan = async (req,res) => {
     if(!course)return res.status(404).json({message:"Course not found."});
     if(!allowedCourse(course,req.user))return res.status(403).json({message:"You can only delete assessment plans for courses assigned to you."});
     const result=await Assessment.deleteMany({course:course._id});
-    res.json({message:`Assessment plan removed from ${course.code}. You can now assign another assessment type.`,deleted:result.deletedCount});
+    // Verify the plan is actually gone before telling the UI the course can be
+    // reassigned. This prevents stale/orphaned components from blocking a new type.
+    const remaining=await Assessment.countDocuments({course:course._id});
+    if(remaining>0)return res.status(409).json({
+      message:`The assessment plan for ${course.code} could not be fully removed. Please try deleting it again.`,
+      deleted:result.deletedCount,
+      remaining,
+    });
+    res.json({message:`Assessment plan removed from ${course.code}. You can now assign another assessment type.`,deleted:result.deletedCount,remaining:0,courseId:String(course._id)});
   } catch(e){res.status(500).json({message:e.message||"Failed to delete course assessment plan."});}
 };

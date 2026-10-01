@@ -158,8 +158,10 @@ function Assessment() {
       await api.delete(`/assessment-templates/course/${courseId}/plan`);
       if (selectedAssessment && courseIdOf(selectedAssessment.course) === courseId) setSelectedId("");
       if (expandedCourseId === courseId) setExpandedCourseId("");
+      if (courseFilter === courseId) setCourseFilter("All");
+      setAssignCourse("");
       await loadData();
-      toast("Course assessment plan deleted. You can assign another assessment type.");
+      toast("Course assessment plan deleted. The course is available for a new assessment type.");
     } catch (err) { toast(err.response?.data?.message || "Unable to delete course assessment plan.", "error"); }
   };
 
@@ -256,6 +258,20 @@ function Assessment() {
     }
     return [...map.values()];
   }, [filtered]);
+
+  // Assignment availability must be based on every loaded assessment, not the
+  // currently filtered plan table. A course disappears as soon as any active
+  // assessment plan exists and returns only after that plan is fully deleted.
+  const assignedCourseIds = useMemo(() => new Set(
+    assessments.map((item) => courseIdOf(item.course)).filter(Boolean)
+  ), [assessments]);
+  const unassignedCourses = useMemo(() =>
+    courses.filter((course) => !assignedCourseIds.has(course._id)),
+  [courses, assignedCourseIds]);
+
+  useEffect(() => {
+    if (assignCourse && assignedCourseIds.has(assignCourse)) setAssignCourse("");
+  }, [assignCourse, assignedCourseIds]);
 
   const titleOptions =
     form.category === "Quiz"
@@ -383,7 +399,7 @@ function Assessment() {
             <button className="template-save" type="button" disabled={saving || templateTotal !== 100 || !templateName.trim()} onClick={saveTemplate}><FaSave/> Save assessment type</button>
           </div>
           <div className="template-library">{templates.map(t=><article key={t._id}><div><strong>{t.name}</strong><span>{asArray(t.components).map(c=>`${c.title} ${c.weight}%`).join(" · ")}</span></div><button onClick={()=>removeTemplate(t._id)} title="Delete type"><FaTrash/></button></article>)}{!templates.length&&<p className="template-empty">No saved assessment types yet.</p>}</div>
-          <div className="template-assign"><select value={assignTemplate} onChange={(e)=>setAssignTemplate(e.target.value)}><option value="">Choose assessment type</option>{templates.map(t=><option key={t._id} value={t._id}>{t.name}</option>)}</select><select value={assignCourse} onChange={(e)=>setAssignCourse(e.target.value)}><option value="">Choose assigned course</option>{courses.map(c=><option key={c._id} value={c._id}>{c.code} — {c.name} · {c.department}</option>)}</select><button onClick={applyTemplate} disabled={saving || !assignTemplate || !assignCourse}>Apply to course</button></div>
+          <div className="template-assign"><select value={assignTemplate} onChange={(e)=>setAssignTemplate(e.target.value)}><option value="">Choose assessment type</option>{templates.map(t=><option key={t._id} value={t._id}>{t.name}</option>)}</select><select value={assignCourse} onChange={(e)=>setAssignCourse(e.target.value)}><option value="">{unassignedCourses.length ? "Choose unassigned course" : "No unassigned courses"}</option>{unassignedCourses.map(c=><option key={c._id} value={c._id}>{c.code} — {c.name} · {c.department}</option>)}</select><button onClick={applyTemplate} disabled={saving || !assignTemplate || !assignCourse}>Apply to course</button></div>
         </section>
 
 
