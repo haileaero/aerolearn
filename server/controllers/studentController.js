@@ -155,6 +155,12 @@ export const getStudents = async (req, res) => {
             $options: "i",
           },
         },
+        {
+          department: {
+            $regex: req.query.search,
+            $options: "i",
+          },
+        },
       ];
     }
 
