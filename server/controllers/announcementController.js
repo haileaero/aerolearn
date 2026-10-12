@@ -8,6 +8,7 @@ const isStudent = (user) => roleOf(user) === "student";
 const isInstructor = (user) => roleOf(user) === "instructor";
 const studentFor = (user) => Student.findOne({ $or: [{ user: user._id }, { studentId: user.studentId }] }).select("courses department year semester section status");
 const same = (a, b) => String(a ?? "").trim().toLowerCase() === String(b ?? "").trim().toLowerCase();
+const targetsAllSections = (section) => !section || ["all", "all sections"].includes(String(section).trim().toLowerCase());
 
 // Blank targeting fields on older announcements are treated as broad targeting
 // for that dimension; the course still has to match the student's eligible courses.
@@ -16,11 +17,11 @@ const announcementMatchesStudent = (announcement, student) => {
   if (!course) return false;
   if (!same(announcement.department, student.department)) return false;
   if (announcement.studyYear && !same(announcement.studyYear, student.year)) return false;
-  if (announcement.section && !same(announcement.section, student.section)) return false;
+  if (!targetsAllSections(announcement.section) && !same(announcement.section, student.section)) return false;
   const assigned = (student.courses || []).some((id) => String(id) === String(course._id));
   const courseProfileMatches = same(course.department, student.department) &&
     same(course.studyYear, student.year) && same(course.semester, student.semester) &&
-    (!announcement.section || same(announcement.section, student.section));
+    (targetsAllSections(announcement.section) || same(announcement.section, student.section));
   return assigned || courseProfileMatches;
 };
 

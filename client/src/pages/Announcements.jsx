@@ -44,7 +44,27 @@ function Announcements() {
 
   const departments = useMemo(() => [...new Set(courses.map(c => norm(c.department)).filter(Boolean))].sort(), [courses]);
   const years = useMemo(() => [...new Set(courses.filter(c => !form.department || c.department === form.department).map(c => norm(c.studyYear)).filter(Boolean))].sort(), [courses, form.department]);
-  const sections = useMemo(() => [...new Set(students.filter(s => (!form.department || s.department === form.department) && (!form.studyYear || s.year === form.studyYear)).map(s => norm(s.section)).filter(Boolean))].sort(), [students, form.department, form.studyYear]);
+  // Keep the section list independent of the students API's pagination. Some
+  // deployments return only one page of students, which must not limit this dropdown.
+  // Include common stored formats and merge in any additional values from student records.
+  const sections = useMemo(() => {
+    const registered = students
+      .filter(s => (!form.department || norm(s.department) === form.department) && (!form.studyYear || norm(s.year) === form.studyYear))
+      .map(s => norm(s.section))
+      .filter(Boolean);
+    const common = [
+      ...Array.from({ length: 10 }, (_, i) => String(i + 1)),
+      ...Array.from({ length: 10 }, (_, i) => `Section ${i + 1}`),
+      ...Array.from({ length: 10 }, (_, i) => String.fromCharCode(65 + i)),
+      ...Array.from({ length: 10 }, (_, i) => `Section ${String.fromCharCode(65 + i)}`),
+    ];
+    const values = new Map();
+    [...common, ...registered].forEach(value => {
+      const key = value.trim().toLocaleLowerCase();
+      if (key && !values.has(key)) values.set(key, value.trim());
+    });
+    return [...values.values()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+  }, [students, form.department, form.studyYear]);
   const matchingCourses = useMemo(() => courses.filter(c => (!form.department || c.department === form.department) && (!form.studyYear || c.studyYear === form.studyYear)), [courses, form.department, form.studyYear]);
 
   const handleChange = (e) => {
@@ -95,7 +115,7 @@ function Announcements() {
         <label className="span-2">Title<input name="title" value={form.title} onChange={handleChange} placeholder="Clear announcement title" required /></label>
         <label>Study Year<select name="studyYear" value={form.studyYear} onChange={handleChange} required><option value="">Select study year</option>{years.map(y=><option key={y} value={y}>{y}</option>)}</select></label>
         <label>Department<select name="department" value={form.department} onChange={handleChange} required><option value="">Select department</option>{departments.map(d=><option key={d} value={d}>{d}</option>)}</select></label>
-        <label>Section<select name="section" value={form.section} onChange={handleChange} required disabled={!form.department || !form.studyYear}><option value="">Select section</option>{sections.map(s=><option key={s} value={s}>{s}</option>)}</select></label>
+        <label>Section<select name="section" value={form.section} onChange={handleChange} required disabled={!form.department || !form.studyYear}><option value="">Select section</option><option value="All">All sections</option>{sections.map(s=><option key={s} value={s}>{s}</option>)}</select></label>
         <label>Course<select name="course" value={form.course} onChange={handleChange} required disabled={!form.department || !form.studyYear}><option value="">Select course</option>{matchingCourses.map(c=><option key={c._id} value={c._id}>{c.code} — {c.name}</option>)}</select></label>
         <label>Audience<select name="audience" value={form.audience} onChange={handleChange}><option>All</option><option>Students</option><option>Instructors</option></select></label>
         <label>Priority<select name="priority" value={form.priority} onChange={handleChange}><option>Low</option><option>Normal</option><option>High</option></select></label>
