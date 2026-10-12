@@ -54,6 +54,8 @@ function getYoutubeEmbed(url) {
     : "";
 }
 
+const MATERIALS_PER_PAGE = 20;
+
 function LearningMaterials() {
 
   const navigate = useNavigate();
@@ -256,6 +258,19 @@ function LearningMaterials() {
     });
   }, [materials, search, categoryFilter, courseFilter]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, categoryFilter, courseFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / MATERIALS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedMaterials = filtered.slice(
+    (safePage - 1) * MATERIALS_PER_PAGE,
+    safePage * MATERIALS_PER_PAGE
+  );
+  const firstMaterial = filtered.length ? (safePage - 1) * MATERIALS_PER_PAGE + 1 : 0;
+  const lastMaterial = Math.min(safePage * MATERIALS_PER_PAGE, filtered.length);
+
   return (
     <Layout>
       <div className="al-control-page">
@@ -426,7 +441,7 @@ function LearningMaterials() {
             <h2>Your learning library</h2>
             <p>Find the right note, assignment, presentation or video without digging through oversized cards.</p>
           </div>
-          <div className="resource-studio-count"><FaLayerGroup /><strong>{filtered.length}</strong><span>showing</span></div>
+          <div className="resource-studio-count"><FaLayerGroup /><strong>{filtered.length}</strong><span>matching materials</span></div>
         </div>
 
         <div className="resource-command-bar">
@@ -453,7 +468,7 @@ function LearningMaterials() {
 
         {filtered.length ? (
           <div className="resource-showcase-grid">
-            {filtered.map((material) => {
+            {paginatedMaterials.map((material) => {
               const course = material.course && typeof material.course === "object" ? material.course : null;
               const embedUrl = material.category === "Video" ? getYoutubeEmbed(material.file) : "";
               const tone = material.category === "Video" ? "video" : material.category === "Assignment" ? "assignment" : material.category === "Exercise" ? "exercise" : material.category === "Slides" ? "slides" : "document";
@@ -501,6 +516,28 @@ function LearningMaterials() {
           </div>
         ) : (
           <div className="resource-empty-state"><FaFolderOpen /><h3>No resources found</h3><p>Try another search, course, or resource type.</p></div>
+        )}
+
+        {filtered.length > 0 && (
+          <div className="resource-pagination" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap", marginTop: "22px", padding: "14px 4px" }}>
+            <span style={{ color: "#64748b", fontSize: "0.9rem" }}>
+              Showing {firstMaterial}–{lastMaterial} of {filtered.length} materials
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+              <button type="button" className="resource-page-button" disabled={safePage === 1} onClick={() => setCurrentPage(1)} style={{ padding: "8px 11px", border: "1px solid #dbe3ef", borderRadius: "8px", background: safePage === 1 ? "#f1f5f9" : "#fff", color: "#1e40af", cursor: safePage === 1 ? "not-allowed" : "pointer" }}>First</button>
+              <button type="button" className="resource-page-button" disabled={safePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} style={{ padding: "8px 11px", border: "1px solid #dbe3ef", borderRadius: "8px", background: safePage === 1 ? "#f1f5f9" : "#fff", color: "#1e40af", cursor: safePage === 1 ? "not-allowed" : "pointer" }}>Previous</button>
+              {Array.from({ length: totalPages }, (_, index) => index + 1)
+                .filter((page) => page === 1 || page === totalPages || Math.abs(page - safePage) <= 1)
+                .map((page, index, pages) => (
+                  <span key={page} style={{ display: "contents" }}>
+                    {index > 0 && page - pages[index - 1] > 1 && <span style={{ color: "#64748b", padding: "0 2px" }}>…</span>}
+                    <button type="button" aria-current={safePage === page ? "page" : undefined} onClick={() => setCurrentPage(page)} style={{ minWidth: "36px", padding: "8px 10px", border: safePage === page ? "1px solid #2563eb" : "1px solid #dbe3ef", borderRadius: "8px", background: safePage === page ? "#2563eb" : "#fff", color: safePage === page ? "#fff" : "#1e40af", fontWeight: safePage === page ? 700 : 500, cursor: "pointer" }}>{page}</button>
+                  </span>
+                ))}
+              <button type="button" className="resource-page-button" disabled={safePage === totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} style={{ padding: "8px 11px", border: "1px solid #dbe3ef", borderRadius: "8px", background: safePage === totalPages ? "#f1f5f9" : "#fff", color: "#1e40af", cursor: safePage === totalPages ? "not-allowed" : "pointer" }}>Next</button>
+              <button type="button" className="resource-page-button" disabled={safePage === totalPages} onClick={() => setCurrentPage(totalPages)} style={{ padding: "8px 11px", border: "1px solid #dbe3ef", borderRadius: "8px", background: safePage === totalPages ? "#f1f5f9" : "#fff", color: "#1e40af", cursor: safePage === totalPages ? "not-allowed" : "pointer" }}>Last</button>
+            </div>
+          </div>
         )}
       </section>
       </div>
