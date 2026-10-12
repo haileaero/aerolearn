@@ -60,7 +60,8 @@ function Assessment() {
   const [scoreSearch, setScoreSearch] = useState("");
   const [scoreSectionFilter, setScoreSectionFilter] = useState("All");
   const [scorePage, setScorePage] = useState(1);
-  const scorePageSize = 20;
+  const [resultsPage, setResultsPage] = useState(1);
+  const STUDENTS_PER_PAGE = 20;
   const [scores, setScores] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -114,6 +115,8 @@ function Assessment() {
       setScores([]);
       return;
     }
+    setScorePage(1);
+    setResultsPage(1);
     setScores(
       asArray(selectedAssessment.scores).filter(Boolean).map((item) => ({
         student: item.student && typeof item.student === "object" ? item.student._id : item.student,
@@ -363,7 +366,7 @@ function Assessment() {
     scores.map((item) => String(item.studentData?.section || "").trim()).filter(Boolean)
   )).sort(), [scores]);
 
-  const filteredScoreRows = useMemo(() => {
+  const scoreRows = useMemo(() => {
     const term = scoreSearch.toLowerCase();
     return scores
       .map((item, index) => ({ ...item, sourceIndex: index }))
@@ -371,11 +374,10 @@ function Assessment() {
       .filter((item) => `${item.studentData?.studentId || ""} ${item.studentData?.fullName || ""}`.toLowerCase().includes(term));
   }, [scores, scoreSearch, scoreSectionFilter]);
 
-  const scorePageCount = Math.max(1, Math.ceil(filteredScoreRows.length / scorePageSize));
-  const scoreRows = filteredScoreRows.slice((scorePage - 1) * scorePageSize, scorePage * scorePageSize);
-  useEffect(() => { setScorePage(1); }, [selectedId, scoreSearch, scoreSectionFilter]);
-  useEffect(() => { if (scorePage > scorePageCount) setScorePage(scorePageCount); }, [scorePage, scorePageCount]);
-
+  const scorePageCount = Math.max(1, Math.ceil(scoreRows.length / STUDENTS_PER_PAGE));
+  const visibleScoreRows = scoreRows.slice((scorePage - 1) * STUDENTS_PER_PAGE, scorePage * STUDENTS_PER_PAGE);
+  const resultsPageCount = Math.max(1, Math.ceil(scores.length / STUDENTS_PER_PAGE));
+  const visibleResults = scores.slice((resultsPage - 1) * STUDENTS_PER_PAGE, resultsPage * STUDENTS_PER_PAGE);
   const enteredRows = scores.filter((item) => item.entered);
   const classAverage = enteredRows.length
     ? enteredRows.reduce((sum, item) => sum + (Number(item.score) || 0), 0) / enteredRows.length
@@ -494,29 +496,25 @@ function Assessment() {
                 <div className="desk-body">
                   <div className="desk-toolbar">
                     <div><strong>Score sheet</strong><span>Enter weighted points from 0 to the assessment maximum. A real zero is recorded correctly.</span></div>
-                    <div className="desk-search"><FaSearch /><input value={scoreSearch} onChange={(e) => setScoreSearch(e.target.value)} placeholder="Search student or ID" /></div><label className="assessment-filter" style={{display:"flex",alignItems:"center",gap:"8px"}}><span>Section</span><select value={scoreSectionFilter} onChange={(e)=>setScoreSectionFilter(e.target.value)}><option value="All">All sections</option>{scoreSections.map((section)=><option key={section} value={section}>{section}</option>)}</select></label>
+                    <div className="desk-search"><FaSearch /><input value={scoreSearch} onChange={(e) => { setScoreSearch(e.target.value); setScorePage(1); }} placeholder="Search student or ID" /></div><label className="assessment-filter" style={{display:"flex",alignItems:"center",gap:"8px"}}><span>Section</span><select value={scoreSectionFilter} onChange={(e)=>{setScoreSectionFilter(e.target.value);setScorePage(1);}}><option value="All">All sections</option>{scoreSections.map((section)=><option key={section} value={section}>{section}</option>)}</select></label>
                   </div>
+                  {scoreRows.length > STUDENTS_PER_PAGE && <div className="al-pagination"><span>Showing {(scorePage - 1) * STUDENTS_PER_PAGE + 1}–{Math.min(scorePage * STUDENTS_PER_PAGE, scoreRows.length)} of {scoreRows.length} students</span><div><button type="button" disabled={scorePage <= 1} onClick={() => setScorePage((p) => Math.max(1, p - 1))}>Previous</button><span>Page {scorePage} of {scorePageCount}</span><button type="button" disabled={scorePage >= scorePageCount} onClick={() => setScorePage((p) => Math.min(scorePageCount, p + 1))}>Next</button></div></div>}
                   <div className="score-table-wrap">
                     <table className="score-entry-table">
                       <thead><tr><th>#</th><th>Student ID</th><th>Student</th><th>Score</th><th>Status</th></tr></thead>
-                      <tbody>{scoreRows.map((item, index) => <tr key={item.student || index}><td>{index + 1}</td><td><span className="table-id">{item.studentData?.studentId || "—"}</span></td><td><strong>{item.studentData?.fullName || "Student record unavailable"}</strong></td><td><div className="score-input-wrap"><input type="number" min="0" max={assessmentMax} step="0.1" value={item.score} onChange={(e) => updateScore(item.sourceIndex, e.target.value)} placeholder="—" /><span>/ {assessmentMax}</span></div></td><td>{item.entered ? <span className="pill pill-green">Entered</span> : <span className="pill pill-amber">Pending</span>}</td></tr>)}</tbody>
+                      <tbody>{visibleScoreRows.map((item, pageIndex) => { const index = (scorePage - 1) * STUDENTS_PER_PAGE + pageIndex; return <tr key={item.student || index}><td>{index + 1}</td><td><span className="table-id">{item.studentData?.studentId || "—"}</span></td><td><strong>{item.studentData?.fullName || "Student record unavailable"}</strong></td><td><div className="score-input-wrap"><input type="number" min="0" max={assessmentMax} step="0.1" value={item.score} onChange={(e) => updateScore(item.sourceIndex, e.target.value)} placeholder="—" /><span>/ {assessmentMax}</span></div></td><td>{item.entered ? <span className="pill pill-green">Entered</span> : <span className="pill pill-amber">Pending</span>}</td></tr>; })}</tbody>
                     </table>
                   </div>
-                  {filteredScoreRows.length > scorePageSize && <div className="al-pagination" aria-label="Score sheet pages" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",padding:"14px 0",flexWrap:"wrap"}}>
-                    <button type="button" className="btn-compact btn-soft" onClick={() => setScorePage((page) => Math.max(1, page - 1))} disabled={scorePage === 1}>Previous</button>
-                    {Array.from({ length: scorePageCount }, (_, index) => index + 1).map((page) => <button type="button" key={page} className={`btn-compact ${scorePage === page ? "btn-primary" : "btn-soft"}`} onClick={() => setScorePage(page)} aria-current={scorePage === page ? "page" : undefined}>{page}</button>)}
-                    <button type="button" className="btn-compact btn-soft" onClick={() => setScorePage((page) => Math.min(scorePageCount, page + 1))} disabled={scorePage === scorePageCount}>Next</button>
-                    <span style={{fontSize:"12px",color:"#64748b"}}>Showing {(scorePage - 1) * scorePageSize + 1}–{Math.min(scorePage * scorePageSize, filteredScoreRows.length)} of {filteredScoreRows.length}</span>
-                  </div>}
                   <div className="desk-save-bar"><span>{enteredRows.length} of {scores.length} scores entered</span><button onClick={saveScores} disabled={saving}><FaSave /> {saving ? "Saving…" : "Save scores"}</button></div>
                 </div>
               ) : (
                 <div className="desk-body results-body">
                   <div className="results-summary-line"><div><strong>{classAverage.toFixed(1)} / {assessmentMax}</strong><span>Score</span></div><div><strong>{passCount}</strong><span>Passed</span></div><div><strong>{Math.max(enteredRows.length - passCount, 0)}</strong><span>Below half mark</span></div><div><strong>{assessmentMax}</strong><span>Maximum score</span></div></div>
+                  {scores.length > STUDENTS_PER_PAGE && <div className="al-pagination"><span>Showing {(resultsPage - 1) * STUDENTS_PER_PAGE + 1}–{Math.min(resultsPage * STUDENTS_PER_PAGE, scores.length)} of {scores.length} students</span><div><button type="button" disabled={resultsPage <= 1} onClick={() => setResultsPage((p) => Math.max(1, p - 1))}>Previous</button><span>Page {resultsPage} of {resultsPageCount}</span><button type="button" disabled={resultsPage >= resultsPageCount} onClick={() => setResultsPage((p) => Math.min(resultsPageCount, p + 1))}>Next</button></div></div>}
                   <div className="score-table-wrap">
                     <table className="score-entry-table results-onepage-table">
                       <thead><tr><th>#</th><th>Student ID</th><th>Student</th><th>Score</th><th>Contribution</th><th>Result</th></tr></thead>
-                      <tbody>{scores.map((item, index) => {
+                      <tbody>{visibleResults.map((item, pageIndex) => { const index = (resultsPage - 1) * STUDENTS_PER_PAGE + pageIndex;
                         const score = Number(item.score) || 0;
                         const contribution = score;
                         return <tr key={item.student || index}><td>{index + 1}</td><td><span className="table-id">{item.studentData?.studentId || "—"}</span></td><td><strong>{item.studentData?.fullName || "Student record unavailable"}</strong></td><td>{item.entered ? `${score.toFixed(1)} / ${assessmentMax}` : "—"}</td><td>{item.entered ? `${contribution.toFixed(1)} / ${assessmentMax}` : "—"}</td><td>{!item.entered ? <span className="pill pill-amber">Pending</span> : score >= passMark ? <span className="pill pill-green">Pass</span> : <span className="pill pill-red">Below half mark</span>}</td></tr>;
