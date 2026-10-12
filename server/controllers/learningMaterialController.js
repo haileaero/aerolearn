@@ -145,9 +145,40 @@ export const getLearningMaterials = async (
         studyYear: student.year,
         semester: student.semester,
         status: "Active",
-      }).select("_id");
+      }).select("_id name code");
 
-      const courseIds = eligibleCourses.map((course) => course._id);
+      // Learning materials are shared by course name, not by a single
+      // department-specific course-offering ID. This lets one upload serve
+      // every active offering with the same course name across departments.
+      // We still start with this student's own eligible courses, then include
+      // other active offerings whose normalized name matches one of them.
+      const normalizeCourseName = (value) =>
+        String(value || "")
+          .trim()
+          .replace(/\s+/g, " ")
+          .toLocaleLowerCase();
+
+      const eligibleCourseNames = new Set(
+        eligibleCourses
+          .map((course) => normalizeCourseName(course.name))
+          .filter(Boolean)
+      );
+
+      const allActiveCourses = eligibleCourseNames.size
+        ? await Course.find({ status: "Active" }).select("_id name")
+        : [];
+
+      const sharedCourseIds = allActiveCourses
+        .filter((course) => eligibleCourseNames.has(normalizeCourseName(course.name)))
+        .map((course) => course._id);
+
+      const courseIds = [
+        ...new Map(
+          [...eligibleCourses.map((course) => course._id), ...sharedCourseIds]
+            .map((id) => [String(id), id])
+        ).values(),
+      ];
+
       filter = { course: { $in: courseIds } };
 
       // Repair stale enrollment while the resource library is being loaded.
