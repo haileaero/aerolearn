@@ -46,8 +46,6 @@ function Attendance() {
   const { toast, confirm } = useUI();
   const [courses, setCourses] = useState([]);
   const [students, setStudents] = useState([]);
-  const [attendancePage, setAttendancePage] = useState(1);
-  const attendancePageSize = 20;
   const [history, setHistory] = useState([]);
   const [selectedStudyYear, setSelectedStudyYear] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("");
@@ -71,8 +69,6 @@ function Attendance() {
   const [error, setError] = useState("");
   const [rosterWarning, setRosterWarning] = useState("");
   const [registerMode, setRegisterMode] = useState("edit");
-
-  useEffect(() => { setAttendancePage(1); }, [students.length, selectedSection, selectedCourse]);
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -648,25 +644,16 @@ function Attendance() {
             <div className="data-wrap">
               <table className="data-table attendance-modern-table">
                 <thead><tr><th>#</th><th>Student ID</th><th>Student</th><th>Year</th><th>Section</th><th>Attendance status</th></tr></thead>
-                <tbody>{students.slice((attendancePage - 1) * attendancePageSize, attendancePage * attendancePageSize).map((student, pageIndex) => { const index = (attendancePage - 1) * attendancePageSize + pageIndex; return <tr key={student.student || `${student.studentId}-${index}`} className={!student.student ? "attendance-row-warning" : ""}>
+                <tbody>{students.map((student, index) => <tr key={student.student || `${student.studentId}-${index}`} className={!student.student ? "attendance-row-warning" : ""}>
                   <td>{index + 1}</td>
                   <td><span className="table-id">{student.studentId || "—"}</span></td>
                   <td><strong className="attendance-student-name">{student.fullName || "Student record unavailable"}</strong></td>
                   <td>{student.year || "—"}</td>
                   <td>{student.section || "—"}</td>
                   <td><div className="attendance-status-switch" role="group" aria-label={`Attendance status for ${student.fullName || "student"}`}>{STATUS_OPTIONS.map((status) => <button type="button" key={status} className={`${status.toLowerCase()} ${(student.status || "Present") === status ? "active" : ""}`} aria-pressed={(student.status || "Present") === status} onClick={() => registerMode === "edit" && handleStatusChange(index, status)} disabled={registerMode === "view"}>{status}</button>)}</div></td>
-                </tr>; })}</tbody>
+                </tr>)}</tbody>
               </table>
             </div>
-
-            {students.length > attendancePageSize && <div className="attendance-pagination" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"12px",padding:"14px 4px",flexWrap:"wrap"}}>
-              <span>Showing {(attendancePage - 1) * attendancePageSize + 1}–{Math.min(attendancePage * attendancePageSize, students.length)} of {students.length} students</span>
-              <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
-                <button type="button" className="btn-compact btn-soft" onClick={() => setAttendancePage((page) => Math.max(1, page - 1))} disabled={attendancePage === 1}>Previous</button>
-                <span>Page {attendancePage} of {Math.ceil(students.length / attendancePageSize)}</span>
-                <button type="button" className="btn-compact btn-soft" onClick={() => setAttendancePage((page) => Math.min(Math.ceil(students.length / attendancePageSize), page + 1))} disabled={attendancePage >= Math.ceil(students.length / attendancePageSize)}>Next</button>
-              </div>
-            </div>}
 
             <div className="ops-save-bar">
               <div><span>{attendanceId ? "Saved attendance session" : "Unsaved attendance session"}</span><small>{date ? `${date} · ${summary.total} student${summary.total === 1 ? "" : "s"} · ${summary.percentage}% present` : "Choose a date before saving"}</small></div>

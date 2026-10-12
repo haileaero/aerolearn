@@ -59,8 +59,6 @@ function Assessment() {
   const [deskTab, setDeskTab] = useState("scores");
   const [scoreSearch, setScoreSearch] = useState("");
   const [scoreSectionFilter, setScoreSectionFilter] = useState("All");
-  const [scorePage, setScorePage] = useState(1);
-  const scorePageSize = 20;
   const [scores, setScores] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -359,8 +357,6 @@ function Assessment() {
     }
   };
 
-  useEffect(() => { setScorePage(1); }, [selectedId, scoreSearch, scoreSectionFilter, scores.length]);
-
   const scoreSections = useMemo(() => Array.from(new Set(
     scores.map((item) => String(item.studentData?.section || "").trim()).filter(Boolean)
   )).sort(), [scores]);
@@ -496,10 +492,9 @@ function Assessment() {
                   <div className="score-table-wrap">
                     <table className="score-entry-table">
                       <thead><tr><th>#</th><th>Student ID</th><th>Student</th><th>Score</th><th>Status</th></tr></thead>
-                      <tbody>{scoreRows.slice((scorePage - 1) * scorePageSize, scorePage * scorePageSize).map((item, pageIndex) => { const index = (scorePage - 1) * scorePageSize + pageIndex; return <tr key={item.student || index}><td>{index + 1}</td><td><span className="table-id">{item.studentData?.studentId || "—"}</span></td><td><strong>{item.studentData?.fullName || "Student record unavailable"}</strong></td><td><div className="score-input-wrap"><input type="number" min="0" max={assessmentMax} step="0.1" value={item.score} onChange={(e) => updateScore(item.sourceIndex, e.target.value)} placeholder="—" /><span>/ {assessmentMax}</span></div></td><td>{item.entered ? <span className="pill pill-green">Entered</span> : <span className="pill pill-amber">Pending</span>}</td></tr>; })}</tbody>
+                      <tbody>{scoreRows.map((item, index) => <tr key={item.student || index}><td>{index + 1}</td><td><span className="table-id">{item.studentData?.studentId || "—"}</span></td><td><strong>{item.studentData?.fullName || "Student record unavailable"}</strong></td><td><div className="score-input-wrap"><input type="number" min="0" max={assessmentMax} step="0.1" value={item.score} onChange={(e) => updateScore(item.sourceIndex, e.target.value)} placeholder="—" /><span>/ {assessmentMax}</span></div></td><td>{item.entered ? <span className="pill pill-green">Entered</span> : <span className="pill pill-amber">Pending</span>}</td></tr>)}</tbody>
                     </table>
                   </div>
-                  {scoreRows.length > scorePageSize && <div className="score-pagination" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"12px",padding:"14px 4px",flexWrap:"wrap"}}><span>Showing {(scorePage - 1) * scorePageSize + 1}–{Math.min(scorePage * scorePageSize, scoreRows.length)} of {scoreRows.length} students</span><div style={{display:"flex",gap:"8px",alignItems:"center"}}><button type="button" className="btn-compact btn-soft" onClick={() => setScorePage((page) => Math.max(1, page - 1))} disabled={scorePage === 1}>Previous</button><span>Page {scorePage} of {Math.ceil(scoreRows.length / scorePageSize)}</span><button type="button" className="btn-compact btn-soft" onClick={() => setScorePage((page) => Math.min(Math.ceil(scoreRows.length / scorePageSize), page + 1))} disabled={scorePage >= Math.ceil(scoreRows.length / scorePageSize)}>Next</button></div></div>}
                   <div className="desk-save-bar"><span>{enteredRows.length} of {scores.length} scores entered</span><button onClick={saveScores} disabled={saving}><FaSave /> {saving ? "Saving…" : "Save scores"}</button></div>
                 </div>
               ) : (
@@ -508,14 +503,13 @@ function Assessment() {
                   <div className="score-table-wrap">
                     <table className="score-entry-table results-onepage-table">
                       <thead><tr><th>#</th><th>Student ID</th><th>Student</th><th>Score</th><th>Contribution</th><th>Result</th></tr></thead>
-                      <tbody>{scores.slice((scorePage - 1) * scorePageSize, scorePage * scorePageSize).map((item, pageIndex) => { const index = (scorePage - 1) * scorePageSize + pageIndex;
+                      <tbody>{scores.map((item, index) => {
                         const score = Number(item.score) || 0;
                         const contribution = score;
                         return <tr key={item.student || index}><td>{index + 1}</td><td><span className="table-id">{item.studentData?.studentId || "—"}</span></td><td><strong>{item.studentData?.fullName || "Student record unavailable"}</strong></td><td>{item.entered ? `${score.toFixed(1)} / ${assessmentMax}` : "—"}</td><td>{item.entered ? `${contribution.toFixed(1)} / ${assessmentMax}` : "—"}</td><td>{!item.entered ? <span className="pill pill-amber">Pending</span> : score >= passMark ? <span className="pill pill-green">Pass</span> : <span className="pill pill-red">Below half mark</span>}</td></tr>;
                       })}</tbody>
                     </table>
                   </div>
-                  {scores.length > scorePageSize && <div className="score-pagination" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"12px",padding:"14px 4px",flexWrap:"wrap"}}><span>Showing {(scorePage - 1) * scorePageSize + 1}–{Math.min(scorePage * scorePageSize, scores.length)} of {scores.length} students</span><div style={{display:"flex",gap:"8px",alignItems:"center"}}><button type="button" className="btn-compact btn-soft" onClick={() => setScorePage((page) => Math.max(1, page - 1))} disabled={scorePage === 1}>Previous</button><span>Page {scorePage} of {Math.ceil(scores.length / scorePageSize)}</span><button type="button" className="btn-compact btn-soft" onClick={() => setScorePage((page) => Math.min(Math.ceil(scores.length / scorePageSize), page + 1))} disabled={scorePage >= Math.ceil(scores.length / scorePageSize)}>Next</button></div></div>}
                 </div>
               )}
             </>
