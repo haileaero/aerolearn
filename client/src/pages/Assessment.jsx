@@ -59,6 +59,8 @@ function Assessment() {
   const [deskTab, setDeskTab] = useState("scores");
   const [scoreSearch, setScoreSearch] = useState("");
   const [scoreSectionFilter, setScoreSectionFilter] = useState("All");
+  const [scorePage, setScorePage] = useState(1);
+  const scorePageSize = 20;
   const [scores, setScores] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -361,13 +363,18 @@ function Assessment() {
     scores.map((item) => String(item.studentData?.section || "").trim()).filter(Boolean)
   )).sort(), [scores]);
 
-  const scoreRows = useMemo(() => {
+  const filteredScoreRows = useMemo(() => {
     const term = scoreSearch.toLowerCase();
     return scores
       .map((item, index) => ({ ...item, sourceIndex: index }))
       .filter((item) => scoreSectionFilter === "All" || String(item.studentData?.section || "").trim() === scoreSectionFilter)
       .filter((item) => `${item.studentData?.studentId || ""} ${item.studentData?.fullName || ""}`.toLowerCase().includes(term));
   }, [scores, scoreSearch, scoreSectionFilter]);
+
+  const scorePageCount = Math.max(1, Math.ceil(filteredScoreRows.length / scorePageSize));
+  const scoreRows = filteredScoreRows.slice((scorePage - 1) * scorePageSize, scorePage * scorePageSize);
+  useEffect(() => { setScorePage(1); }, [selectedId, scoreSearch, scoreSectionFilter]);
+  useEffect(() => { if (scorePage > scorePageCount) setScorePage(scorePageCount); }, [scorePage, scorePageCount]);
 
   const enteredRows = scores.filter((item) => item.entered);
   const classAverage = enteredRows.length
@@ -495,6 +502,12 @@ function Assessment() {
                       <tbody>{scoreRows.map((item, index) => <tr key={item.student || index}><td>{index + 1}</td><td><span className="table-id">{item.studentData?.studentId || "—"}</span></td><td><strong>{item.studentData?.fullName || "Student record unavailable"}</strong></td><td><div className="score-input-wrap"><input type="number" min="0" max={assessmentMax} step="0.1" value={item.score} onChange={(e) => updateScore(item.sourceIndex, e.target.value)} placeholder="—" /><span>/ {assessmentMax}</span></div></td><td>{item.entered ? <span className="pill pill-green">Entered</span> : <span className="pill pill-amber">Pending</span>}</td></tr>)}</tbody>
                     </table>
                   </div>
+                  {filteredScoreRows.length > scorePageSize && <div className="al-pagination" aria-label="Score sheet pages" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",padding:"14px 0",flexWrap:"wrap"}}>
+                    <button type="button" className="btn-compact btn-soft" onClick={() => setScorePage((page) => Math.max(1, page - 1))} disabled={scorePage === 1}>Previous</button>
+                    {Array.from({ length: scorePageCount }, (_, index) => index + 1).map((page) => <button type="button" key={page} className={`btn-compact ${scorePage === page ? "btn-primary" : "btn-soft"}`} onClick={() => setScorePage(page)} aria-current={scorePage === page ? "page" : undefined}>{page}</button>)}
+                    <button type="button" className="btn-compact btn-soft" onClick={() => setScorePage((page) => Math.min(scorePageCount, page + 1))} disabled={scorePage === scorePageCount}>Next</button>
+                    <span style={{fontSize:"12px",color:"#64748b"}}>Showing {(scorePage - 1) * scorePageSize + 1}–{Math.min(scorePage * scorePageSize, filteredScoreRows.length)} of {filteredScoreRows.length}</span>
+                  </div>}
                   <div className="desk-save-bar"><span>{enteredRows.length} of {scores.length} scores entered</span><button onClick={saveScores} disabled={saving}><FaSave /> {saving ? "Saving…" : "Save scores"}</button></div>
                 </div>
               ) : (

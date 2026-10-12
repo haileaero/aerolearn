@@ -46,6 +46,8 @@ function Attendance() {
   const { toast, confirm } = useUI();
   const [courses, setCourses] = useState([]);
   const [students, setStudents] = useState([]);
+  const [studentPage, setStudentPage] = useState(1);
+  const studentPageSize = 20;
   const [history, setHistory] = useState([]);
   const [selectedStudyYear, setSelectedStudyYear] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("");
@@ -137,6 +139,10 @@ function Attendance() {
     };
   }, [students]);
 
+  const studentPageCount = Math.max(1, Math.ceil(students.length / studentPageSize));
+  const visibleStudents = students.slice((studentPage - 1) * studentPageSize, studentPage * studentPageSize);
+  useEffect(() => { if (studentPage > studentPageCount) setStudentPage(studentPageCount); }, [studentPage, studentPageCount]);
+
   const loadHistory = async (courseId) => {
     if (!courseId) return [];
     try {
@@ -220,7 +226,23 @@ function Attendance() {
     try {
       const courseResponse = await api.get(`/courses/${selectedCourse}`);
       const course = courseResponse.data;
-      const allCourseRoster = asArray(course?.students).filter((student) => student && student.status !== "Suspended");
+      const linkedRoster = asArray(course?.students).filter((student) => student && student.status !== "Suspended");
+      // Fetch the full student directory as well: Course.students can be stale or
+      // incomplete, while the assessment roster is built from matching academic profiles.
+      const directoryResponse = await api.get("/students", { params: { page: 1, limit: 500, department: selectedDepartment, year: selectedStudyYear, status: "Active" } });
+      const directoryRows = asArray(directoryResponse.data?.students).length ? directoryResponse.data.students : asArray(directoryResponse.data);
+      const academicRoster = directoryRows.filter((student) =>
+        student && student.status !== "Suspended" &&
+        String(student.department || "") === String(course.department || selectedDepartment) &&
+        String(student.year || "") === String(course.studyYear || selectedStudyYear) &&
+        (!course.semester || String(student.semester || "") === String(course.semester))
+      );
+      const rosterMap = new Map();
+      [...linkedRoster, ...academicRoster].forEach((student) => {
+        const id = String(getEntityId(student));
+        if (id) rosterMap.set(id, student);
+      });
+      const allCourseRoster = Array.from(rosterMap.values());
       const courseRoster = selectedSection ? allCourseRoster.filter((student) => clean(student.section) === selectedSection) : allCourseRoster;
 
       try {
@@ -236,6 +258,7 @@ function Attendance() {
       }
 
       const roster = courseRoster.map(normalizeRosterStudent);
+      setStudentPage(1);
       setStudents(roster);
       setAttendanceId(null);
 
@@ -510,6 +533,7 @@ function Attendance() {
       setPeriod(session.period || 1);
       setDate(session.date ? String(session.date).slice(0, 10) : "");
       setAttendanceId(session._id);
+      setStudentPage(1);
       setStudents(asArray(session.students).map(normalizeAttendanceStudent));
       setRegisterMode(mode);
       setMessage(mode === "edit" ? "Attendance session opened for editing." : "Attendance session opened in view mode.");
@@ -644,8 +668,8 @@ function Attendance() {
             <div className="data-wrap">
               <table className="data-table attendance-modern-table">
                 <thead><tr><th>#</th><th>Student ID</th><th>Student</th><th>Year</th><th>Section</th><th>Attendance status</th></tr></thead>
-                <tbody>{students.map((student, index) => <tr key={student.student || `${student.studentId}-${index}`} className={!student.student ? "attendance-row-warning" : ""}>
-                  <td>{index + 1}</td>
+                <tbody>{visibleStudents.map((student, index) => <tr key={student.student || `${student.studentId}-${index}`} className={!student.student ? "attendance-row-warning" : ""}>
+                  <td>{(studentPage - 1) * studentPageSize + index + 1}</td>
                   <td><span className="table-id">{student.studentId || "—"}</span></td>
                   <td><strong className="attendance-student-name">{student.fullName || "Student record unavailable"}</strong></td>
                   <td>{student.year || "—"}</td>
@@ -654,6 +678,12 @@ function Attendance() {
                 </tr>)}</tbody>
               </table>
             </div>
+            {students.length > studentPageSize && <div className="al-pagination" aria-label="Attendance register pages" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",padding:"14px 0",flexWrap:"wrap"}}>
+              <button type="button" className="btn-compact btn-soft" onClick={() => setStudentPage((page) => Math.max(1, page - 1))} disabled={studentPage === 1}>Previous</button>
+              {Array.from({ length: studentPageCount }, (_, index) => index + 1).map((page) => <button type="button" key={page} className={`btn-compact ${studentPage === page ? "btn-primary" : "btn-soft"}`} onClick={() => setStudentPage(page)} aria-current={studentPage === page ? "page" : undefined}>{page}</button>)}
+              <button type="button" className="btn-compact btn-soft" onClick={() => setStudentPage((page) => Math.min(studentPageCount, page + 1))} disabled={studentPage === studentPageCount}>Next</button>
+              <span style={{fontSize:"12px",color:"#64748b"}}>Showing {(studentPage - 1) * studentPageSize + 1}–{Math.min(studentPage * studentPageSize, students.length)} of {students.length}</span>
+            </div>}
 
             <div className="ops-save-bar">
               <div><span>{attendanceId ? "Saved attendance session" : "Unsaved attendance session"}</span><small>{date ? `${date} · ${summary.total} student${summary.total === 1 ? "" : "s"} · ${summary.percentage}% present` : "Choose a date before saving"}</small></div>
