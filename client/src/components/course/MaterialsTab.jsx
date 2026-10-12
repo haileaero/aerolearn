@@ -13,10 +13,12 @@ const getFileType = (file = "") => {
 const getFileUrl = (file = "") => file.startsWith("http") ? file : `${import.meta.env.VITE_API_URL?.replace("/api", "") || ""}${file}`;
 const getYoutubeEmbedUrl = (url = "") => { const match = url.match(/^.*(?:youtu\.be\/|embed\/|watch\?v=)([^#&?]*).*/); return match?.[1] ? `https://www.youtube.com/embed/${match[1]}` : ""; };
 const icons = { pdf: FaFilePdf, youtube: FaPlay, video: FaVideo, slides: FaFileAlt, file: FaFolderOpen };
+const MATERIALS_PER_PAGE = 20;
 
 function MaterialsTab({ materials = [] }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
   const filtered = useMemo(() => materials.filter(m => {
     const type = getFileType(m.file);
     const matchesSearch = `${m.title || ""} ${m.description || ""} ${m.category || ""}`.toLowerCase().includes(search.toLowerCase());

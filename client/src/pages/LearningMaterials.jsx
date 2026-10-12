@@ -73,6 +73,7 @@ function LearningMaterials() {
     useState(null);
 
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [courseFilter, setCourseFilter] = useState("All");
   const [showUpload, setShowUpload] = useState(false);

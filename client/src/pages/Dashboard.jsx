@@ -23,13 +23,16 @@ function Dashboard() {
         const common = [api.get("/students"), api.get("/courses"), api.get("/attendance"), api.get("/assessment"), api.get("/announcements"), api.get("/learning-materials")];
         // The student directory is intentionally paginated (20 records per page).
         // Dashboard totals must come from the aggregate endpoint, not the current page length.
-        const [results, studentStatsResult] = await Promise.all([
+        const [results, studentStatsResult, userStatsResult] = await Promise.all([
           Promise.all(isAdmin(user) ? [api.get("/users"), ...common] : common),
           api.get("/students/statistics"),
+          isAdmin(user)
+            ? api.get("/users/statistics")
+            : Promise.resolve({ data: { totalUsers: 0 } }),
         ]);
         const offset = isAdmin(user) ? 1 : 0;
         setStats({
-          users: isAdmin(user) ? normalize(results[0].data, "users").length : 0,
+          users: isAdmin(user) ? (Number(userStatsResult.data?.totalUsers) || 0) : 0,
           students: Number(studentStatsResult.data?.summary?.totalStudents) || 0,
           courses: normalize(results[offset + 1].data, "courses").length,
           attendance: normalize(results[offset + 2].data, "attendance").length,

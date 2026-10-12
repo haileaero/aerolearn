@@ -111,7 +111,7 @@ function CourseDetails() {
         const normalizeCourseName = (value) =>
           String(value || "")
             .trim()
-            .replace(/\\s+/g, " ")
+            .replace(/\s+/g, " ")
             .toLocaleLowerCase();
 
         const currentCourseName = normalizeCourseName(
