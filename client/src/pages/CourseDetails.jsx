@@ -108,27 +108,45 @@ function CourseDetails() {
             ? materialRes.data.materials
             : [];
 
+        const normalizeCourseName = (value) =>
+          String(value || "")
+            .trim()
+            .replace(/\\s+/g, " ")
+            .toLocaleLowerCase();
+
+        const currentCourseName = normalizeCourseName(
+          courseData.name || courseData.title
+        );
+
         const courseMaterials =
-          materialRows.filter(
-            (material) => {
+          materialRows.filter((material) => {
+            const materialCourse =
+              material.course && typeof material.course === "object"
+                ? material.course
+                : null;
 
-              const materialCourseId =
-                typeof material.course ===
-                "object"
-                  ? material.course?._id
-                  : material.course;
+            const materialCourseId = materialCourse
+              ? materialCourse._id
+              : material.course;
 
-              return (
-                String(
-                  materialCourseId
-                ) ===
-                String(
-                  courseData._id
-                )
-              );
+            // Materials may be uploaded against another department's
+            // offering of the same course. Match by ID first, then by
+            // normalized course name, as the backend permits shared
+            // materials across same-name course offerings.
+            const sameCourseId =
+              String(materialCourseId || "") === String(courseData._id);
 
-            }
-          );
+            const materialCourseName = normalizeCourseName(
+              materialCourse?.name || materialCourse?.title
+            );
+
+            return (
+              sameCourseId ||
+              (currentCourseName &&
+                materialCourseName &&
+                currentCourseName === materialCourseName)
+            );
+          });
 
         setMaterials(
           courseMaterials
