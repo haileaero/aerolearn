@@ -13,6 +13,11 @@ const announcementSchema = new mongoose.Schema(
     },
 
 
+    // Targeting fields are stored explicitly so announcements can be
+    // restricted to a specific student cohort as well as a course.
+    studyYear: { type: String, default: "", trim: true },
+    section: { type: String, default: "", trim: true },
+
     // =====================================================
     // COURSE
     // =====================================================
@@ -128,11 +133,7 @@ const announcementSchema = new mongoose.Schema(
 // Makes it faster to find announcements belonging to
 // a particular department and course.
 
-announcementSchema.index({
-  department: 1,
-  course: 1,
-  createdAt: -1,
-});
+announcementSchema.index({ department: 1, studyYear: 1, section: 1, course: 1, createdAt: -1 });
 
 
 // =========================================================
