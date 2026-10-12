@@ -1199,12 +1199,3 @@ text-align:center;
 width:100%;
 
 }
-
-/* AeroLearn v6.11 shared roster pagination */
-.al-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:10px 0;padding:10px 12px;border:1px solid #dce6f3;border-radius:10px;background:#f7faff;color:#52627a;font-size:11px;font-weight:650}
-.al-pagination>div{display:flex;align-items:center;gap:8px}
-.al-pagination button{border:1px solid #cbd8e9;border-radius:7px;padding:6px 10px;background:#fff;color:#173f7a;font-size:11px;font-weight:750;cursor:pointer}
-.al-pagination button:hover:not(:disabled){background:#eaf2ff;border-color:#9bb8e4}
-.al-pagination button:disabled{opacity:.42;cursor:not-allowed}
-.al-pagination>div>span{white-space:nowrap}
-@media(max-width:560px){.al-pagination{align-items:flex-start;flex-direction:column}.al-pagination>div{width:100%;justify-content:space-between}}

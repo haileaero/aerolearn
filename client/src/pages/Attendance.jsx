@@ -46,8 +46,8 @@ function Attendance() {
   const { toast, confirm } = useUI();
   const [courses, setCourses] = useState([]);
   const [students, setStudents] = useState([]);
-  const [studentPage, setStudentPage] = useState(1);
-  const STUDENTS_PER_PAGE = 20;
+  const [attendancePage, setAttendancePage] = useState(1);
+  const attendancePageSize = 20;
   const [history, setHistory] = useState([]);
   const [selectedStudyYear, setSelectedStudyYear] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("");
@@ -71,6 +71,8 @@ function Attendance() {
   const [error, setError] = useState("");
   const [rosterWarning, setRosterWarning] = useState("");
   const [registerMode, setRegisterMode] = useState("edit");
+
+  useEffect(() => { setAttendancePage(1); }, [students.length, selectedSection, selectedCourse]);
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -208,7 +210,6 @@ function Attendance() {
   };
 
   const loadStudents = async (selectedWeek = week, selectedPeriod = period) => {
-    setStudentPage(1);
     if (!selectedStudyYear) return setError("Please select a study year.");
     if (!selectedDepartment) return setError("Please select a department.");
     if (!selectedCourse) return setError("Please select a course.");
@@ -255,9 +256,6 @@ function Attendance() {
       setLoading(false);
     }
   };
-
-  const studentPageCount = Math.max(1, Math.ceil(students.length / STUDENTS_PER_PAGE));
-  const visibleStudents = students.slice((studentPage - 1) * STUDENTS_PER_PAGE, studentPage * STUDENTS_PER_PAGE);
 
   const handleStatusChange = (index, status) => {
     setStudents((previous) => previous.map((student, i) => (i === index ? { ...student, status } : student)));
@@ -502,7 +500,6 @@ function Attendance() {
   };
 
   const openSavedSession = async (item, mode = "view") => {
-    setStudentPage(1);
     try {
       setLoading(true);
       setError("");
@@ -648,12 +645,10 @@ function Attendance() {
 
             <div className="attendance-status-legend"><span><i className="present-dot" /> Present</span><span><i className="absent-dot" /> Absent</span><span><i className="late-dot" /> Late</span><small>Choose one status for every student.</small></div>
 
-            {students.length > STUDENTS_PER_PAGE && <div className="al-pagination"><span>Showing {(studentPage - 1) * STUDENTS_PER_PAGE + 1}–{Math.min(studentPage * STUDENTS_PER_PAGE, students.length)} of {students.length} students</span><div><button type="button" disabled={studentPage <= 1} onClick={() => setStudentPage((p) => Math.max(1, p - 1))}>Previous</button><span>Page {studentPage} of {studentPageCount}</span><button type="button" disabled={studentPage >= studentPageCount} onClick={() => setStudentPage((p) => Math.min(studentPageCount, p + 1))}>Next</button></div></div>}
-
             <div className="data-wrap">
               <table className="data-table attendance-modern-table">
                 <thead><tr><th>#</th><th>Student ID</th><th>Student</th><th>Year</th><th>Section</th><th>Attendance status</th></tr></thead>
-                <tbody>{visibleStudents.map((student, pageIndex) => { const index = (studentPage - 1) * STUDENTS_PER_PAGE + pageIndex; return <tr key={student.student || `${student.studentId}-${index}`} className={!student.student ? "attendance-row-warning" : ""}>
+                <tbody>{students.slice((attendancePage - 1) * attendancePageSize, attendancePage * attendancePageSize).map((student, pageIndex) => { const index = (attendancePage - 1) * attendancePageSize + pageIndex; return <tr key={student.student || `${student.studentId}-${index}`} className={!student.student ? "attendance-row-warning" : ""}>
                   <td>{index + 1}</td>
                   <td><span className="table-id">{student.studentId || "—"}</span></td>
                   <td><strong className="attendance-student-name">{student.fullName || "Student record unavailable"}</strong></td>
@@ -663,6 +658,15 @@ function Attendance() {
                 </tr>; })}</tbody>
               </table>
             </div>
+
+            {students.length > attendancePageSize && <div className="attendance-pagination" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"12px",padding:"14px 4px",flexWrap:"wrap"}}>
+              <span>Showing {(attendancePage - 1) * attendancePageSize + 1}–{Math.min(attendancePage * attendancePageSize, students.length)} of {students.length} students</span>
+              <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
+                <button type="button" className="btn-compact btn-soft" onClick={() => setAttendancePage((page) => Math.max(1, page - 1))} disabled={attendancePage === 1}>Previous</button>
+                <span>Page {attendancePage} of {Math.ceil(students.length / attendancePageSize)}</span>
+                <button type="button" className="btn-compact btn-soft" onClick={() => setAttendancePage((page) => Math.min(Math.ceil(students.length / attendancePageSize), page + 1))} disabled={attendancePage >= Math.ceil(students.length / attendancePageSize)}>Next</button>
+              </div>
+            </div>}
 
             <div className="ops-save-bar">
               <div><span>{attendanceId ? "Saved attendance session" : "Unsaved attendance session"}</span><small>{date ? `${date} · ${summary.total} student${summary.total === 1 ? "" : "s"} · ${summary.percentage}% present` : "Choose a date before saving"}</small></div>
