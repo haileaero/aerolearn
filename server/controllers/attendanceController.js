@@ -69,6 +69,7 @@ export const getAttendance = async (req, res) => {
     if (req.query.department) filter.department = req.query.department;
     if (req.query.studyYear) filter.year = req.query.studyYear;
     if (req.query.period) filter.period = Number(req.query.period);
+    if (req.query.section !== undefined) filter.section = String(req.query.section || "");
     if (req.query.date) {
       const dayStart = new Date(`${String(req.query.date).slice(0, 10)}T00:00:00.000Z`);
       const dayEnd = new Date(dayStart); dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
@@ -97,7 +98,7 @@ export const getAttendance = async (req, res) => {
 
 export const checkAttendanceSession = async (req, res) => {
   try {
-    const { course, date, period } = req.query;
+    const { course, date, period, section = "" } = req.query;
     if (!course || !date || !period) return res.status(400).json({ message: "Course, date and period are required." });
     const selectedCourse = await Course.findById(course).select("instructor").lean();
     if (!selectedCourse) return res.status(404).json({ message: "Course not found." });
@@ -106,7 +107,7 @@ export const checkAttendanceSession = async (req, res) => {
     }
     const dayStart = new Date(`${String(date).slice(0,10)}T00:00:00.000Z`);
     const dayEnd = new Date(dayStart); dayEnd.setUTCDate(dayEnd.getUTCDate()+1);
-    const existing = await Attendance.findOne({ course, period: Number(period), date: { $gte: dayStart, $lt: dayEnd } }).select("_id week period date").lean();
+    const existing = await Attendance.findOne({ course, section: String(section || ""), period: Number(period), date: { $gte: dayStart, $lt: dayEnd } }).select("_id week period date section").lean();
     res.status(200).json({ exists: Boolean(existing), session: existing || null });
   } catch (error) {
     console.error(error);
@@ -321,6 +322,7 @@ export const createAttendance = async (req, res) => {
       week,
       period,
       date,
+      section = "",
       students,
     } = req.body;
 
@@ -340,6 +342,7 @@ export const createAttendance = async (req, res) => {
     dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
     const existingAttendance = await Attendance.findOne({
       course,
+      section: String(section || ""),
       period,
       date: { $gte: dayStart, $lt: dayEnd },
     });
@@ -378,6 +381,7 @@ export const createAttendance = async (req, res) => {
       year: selectedCourse.studyYear,
 
       course,
+      section: String(section || ""),
 
       week,
 
@@ -451,6 +455,7 @@ export const updateAttendance =
       const duplicate = await Attendance.findOne({
         _id: { $ne: req.params.id },
         course: attendance.course,
+        section: String(req.body.section ?? attendance.section ?? ""),
         period: req.body.period,
         date: { $gte: updateDayStart, $lt: updateDayEnd },
       });
@@ -491,6 +496,7 @@ export const updateAttendance =
 
       }
 
+      attendance.section = String(req.body.section ?? attendance.section ?? "");
       attendance.students =
         await buildAttendanceRows(req.body.students);
 

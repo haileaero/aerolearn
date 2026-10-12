@@ -50,6 +50,8 @@ function Attendance() {
   const [selectedStudyYear, setSelectedStudyYear] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
+  const [sectionOptionsFromCourse, setSectionOptionsFromCourse] = useState([]);
   const [searchStudyYear, setSearchStudyYear] = useState("");
   const [searchDepartment, setSearchDepartment] = useState("");
   const [searchCourse, setSearchCourse] = useState("");
@@ -93,6 +95,30 @@ function Attendance() {
     () => courses.find((course) => course._id === selectedCourse),
     [courses, selectedCourse]
   );
+
+  const registerSections = useMemo(() => {
+    const course = courses.find((item) => item._id === selectedCourse);
+    return Array.from(new Set([
+      ...asArray(course?.students).map((student) => clean(student?.section)),
+      ...sectionOptionsFromCourse,
+    ].filter((section) => section && section !== "—"))).sort();
+  }, [courses, selectedCourse, sectionOptionsFromCourse]);
+
+  useEffect(() => {
+    let active = true;
+    if (!selectedCourse) {
+      setSectionOptionsFromCourse([]);
+      return undefined;
+    }
+    api.get(`/courses/${selectedCourse}`).then((response) => {
+      if (!active) return;
+      const roster = asArray(response.data?.students);
+      setSectionOptionsFromCourse(Array.from(new Set(roster.map((student) => clean(student?.section)).filter(Boolean))).sort());
+    }).catch(() => {
+      if (active) setSectionOptionsFromCourse([]);
+    });
+    return () => { active = false; };
+  }, [selectedCourse]);
 
   const summary = useMemo(() => {
     const counts = students.reduce(
@@ -194,14 +220,15 @@ function Attendance() {
     try {
       const courseResponse = await api.get(`/courses/${selectedCourse}`);
       const course = courseResponse.data;
-      const courseRoster = asArray(course?.students).filter((student) => student && student.status !== "Suspended");
+      const allCourseRoster = asArray(course?.students).filter((student) => student && student.status !== "Suspended");
+      const courseRoster = selectedSection ? allCourseRoster.filter((student) => clean(student.section) === selectedSection) : allCourseRoster;
 
       try {
-        const existingResponse = await api.get("/attendance/check", { params: { course: selectedCourse, date, period: selectedPeriod } });
+        const existingResponse = await api.get("/attendance/check", { params: { course: selectedCourse, date, period: selectedPeriod, section: selectedSection } });
         if (existingResponse.data?.exists) {
           setStudents([]);
           setAttendanceId(null);
-          setError(`Attendance already exists for this class on ${date}, Period ${selectedPeriod}. Use Saved Attendance to view or edit it.`);
+          setError(`Attendance already exists for ${selectedSection ? `Section ${selectedSection}` : "this class"} on ${date}, Period ${selectedPeriod}. Use Saved Attendance to view or edit it.`);
           return;
         }
       } catch (attendanceError) {
@@ -245,6 +272,7 @@ function Attendance() {
     try {
       const payload = {
         course: selectedCourse,
+        section: selectedSection,
         week,
         period,
         date,
@@ -477,6 +505,7 @@ function Attendance() {
       setSelectedStudyYear(clean(session.year || sessionCourse.studyYear));
       setSelectedDepartment(clean(session.department || sessionCourse.department));
       setSelectedCourse(getEntityId(sessionCourse));
+      setSelectedSection(clean(session.section));
       setWeek(session.week || 1);
       setPeriod(session.period || 1);
       setDate(session.date ? String(session.date).slice(0, 10) : "");
@@ -568,6 +597,7 @@ function Attendance() {
             <div className="field"><label>Study year</label><select value={selectedStudyYear} onChange={(e)=>handleStudyYearChange(e.target.value)}><option value="">Select year</option>{studyYears.map((y)=><option key={y} value={y}>{y}</option>)}</select></div>
             <div className="field"><label>Department</label><select value={selectedDepartment} onChange={(e)=>handleDepartmentChange(e.target.value)} disabled={!selectedStudyYear}><option value="">{selectedStudyYear ? "Select department" : "Study year first"}</option>{registerDepartments.map((d)=><option key={d} value={d}>{d}</option>)}</select></div>
             <div className="field"><label>Course</label><select value={selectedCourse} onChange={(e)=>handleCourseChange(e.target.value)} disabled={!selectedDepartment}><option value="">{selectedDepartment ? "Select course" : "Department first"}</option>{filteredCourses.map((c)=><option key={c._id} value={c._id}>{c.code} — {c.name}</option>)}</select></div>
+            <div className="field"><label>Section</label><select value={selectedSection} onChange={(e)=>{setSelectedSection(e.target.value);setStudents([]);setAttendanceId(null);setMessage("");setError("");}} disabled={!selectedCourse}><option value="">{selectedCourse ? "All sections" : "Course first"}</option>{registerSections.map((section)=><option key={section} value={section}>{section}</option>)}</select></div>
             <div className="field"><label>Week</label><select value={week} onChange={(e)=>setWeek(Number(e.target.value))}>{Array.from({length:16},(_,i)=><option key={i+1} value={i+1}>Week {i+1}</option>)}</select></div>
             <div className="field"><label>Period</label><select value={period} onChange={(e)=>setPeriod(Number(e.target.value))}>{[1,2,3,4,5].map((p)=><option key={p} value={p}>Period {p}</option>)}</select></div>
             <div className="field"><label>Date</label><input type="date" value={date} onChange={(e)=>setDate(e.target.value)}/></div>

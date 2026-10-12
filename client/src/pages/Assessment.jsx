@@ -58,6 +58,7 @@ function Assessment() {
   const [expandedCourseId, setExpandedCourseId] = useState("");
   const [deskTab, setDeskTab] = useState("scores");
   const [scoreSearch, setScoreSearch] = useState("");
+  const [scoreSectionFilter, setScoreSectionFilter] = useState("All");
   const [scores, setScores] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -319,6 +320,7 @@ function Assessment() {
     setSelectedId(assessmentId);
     setDeskTab(tab);
     setScoreSearch("");
+    setScoreSectionFilter("All");
     setTimeout(() => deskRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
   };
 
@@ -355,12 +357,17 @@ function Assessment() {
     }
   };
 
+  const scoreSections = useMemo(() => Array.from(new Set(
+    scores.map((item) => String(item.studentData?.section || "").trim()).filter(Boolean)
+  )).sort(), [scores]);
+
   const scoreRows = useMemo(() => {
     const term = scoreSearch.toLowerCase();
     return scores
       .map((item, index) => ({ ...item, sourceIndex: index }))
+      .filter((item) => scoreSectionFilter === "All" || String(item.studentData?.section || "").trim() === scoreSectionFilter)
       .filter((item) => `${item.studentData?.studentId || ""} ${item.studentData?.fullName || ""}`.toLowerCase().includes(term));
-  }, [scores, scoreSearch]);
+  }, [scores, scoreSearch, scoreSectionFilter]);
 
   const enteredRows = scores.filter((item) => item.entered);
   const classAverage = enteredRows.length
@@ -480,7 +487,7 @@ function Assessment() {
                 <div className="desk-body">
                   <div className="desk-toolbar">
                     <div><strong>Score sheet</strong><span>Enter weighted points from 0 to the assessment maximum. A real zero is recorded correctly.</span></div>
-                    <div className="desk-search"><FaSearch /><input value={scoreSearch} onChange={(e) => setScoreSearch(e.target.value)} placeholder="Search student or ID" /></div>
+                    <div className="desk-search"><FaSearch /><input value={scoreSearch} onChange={(e) => setScoreSearch(e.target.value)} placeholder="Search student or ID" /></div><label className="assessment-filter" style={{display:"flex",alignItems:"center",gap:"8px"}}><span>Section</span><select value={scoreSectionFilter} onChange={(e)=>setScoreSectionFilter(e.target.value)}><option value="All">All sections</option>{scoreSections.map((section)=><option key={section} value={section}>{section}</option>)}</select></label>
                   </div>
                   <div className="score-table-wrap">
                     <table className="score-entry-table">

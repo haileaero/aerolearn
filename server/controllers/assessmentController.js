@@ -35,7 +35,7 @@ const syncAssessmentRoster = async (assessment) => {
     await Assessment.updateOne({ _id: assessment._id }, { $set: { scores: assessment.scores.map((row) => ({
       student: row.student?._id || row.student, score: row.score || 0, entered: row.entered === true, remark: row.remark || ""
     })) } });
-    await assessment.populate("scores.student", "studentId fullName department");
+    await assessment.populate("scores.student", "studentId fullName department section");
   }
   assessment.scores = (assessment.scores || []).filter((row) => row.student);
   return assessment;
@@ -68,7 +68,7 @@ export const getAssessments = async (
 
         .populate(
           "scores.student",
-          "studentId fullName department"
+          "studentId fullName department section"
         )
 
         .sort({
@@ -121,7 +121,7 @@ export const getAssessmentById =
 
           .populate(
             "scores.student",
-            "studentId fullName department"
+            "studentId fullName department section"
           );
 
       if (!assessment) {
@@ -297,7 +297,7 @@ export const createAssessment =
 
           .populate(
             "scores.student",
-            "studentId fullName department"
+            "studentId fullName department section"
           );
 
       res.status(201).json(
@@ -384,7 +384,7 @@ export const updateAssessment =
 
           .populate(
             "scores.student",
-            "studentId fullName department"
+            "studentId fullName department section"
           );
 
       res.status(200).json(
@@ -495,7 +495,7 @@ export const updateScores =
 
           .populate(
             "scores.student",
-            "studentId fullName department"
+            "studentId fullName department section"
           );
 
       res.status(200).json(

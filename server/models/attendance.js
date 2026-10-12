@@ -46,6 +46,8 @@ const attendanceSchema = new mongoose.Schema(
       required: true,
     },
 
+    section: { type: String, default: "", trim: true },
+
     week: {
       type: Number,
       required: true,
@@ -70,8 +72,8 @@ const attendanceSchema = new mongoose.Schema(
 );
 
 attendanceSchema.index(
-  { course: 1, date: 1, period: 1 },
-  { unique: true, name: "attendance_course_date_period_unique" }
+  { course: 1, date: 1, period: 1, section: 1 },
+  { unique: true, name: "attendance_course_date_period_section_unique" }
 );
 
 export default mongoose.model("Attendance", attendanceSchema);

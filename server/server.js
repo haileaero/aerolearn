@@ -203,6 +203,22 @@ const startServer =
     try {
       await connectDB();
 
+      // Section-aware attendance sessions replace the older course/date/period unique index.
+      // Drop only that known legacy index so different sections can meet in the same period.
+      try {
+        const { default: Attendance } = await import("./models/attendance.js");
+        const indexes = await Attendance.collection.indexes();
+        if (indexes.some((index) => index.name === "attendance_course_date_period_unique")) {
+          await Attendance.collection.dropIndex("attendance_course_date_period_unique");
+        }
+        await Attendance.collection.createIndex(
+          { course: 1, date: 1, period: 1, section: 1 },
+          { unique: true, name: "attendance_course_date_period_section_unique" }
+        );
+      } catch (indexError) {
+        console.warn("Attendance section index migration skipped:", indexError.message);
+      }
+
       const PORT =
         process.env.PORT ||
         5000;
