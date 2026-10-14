@@ -5,7 +5,7 @@ import { AuthContext } from "../context/AuthContext";
 import { useUI } from "../context/UIContext";
 import { getCourses } from "../services/courseService";
 import { getStudents } from "../services/studentService";
-import { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement } from "../services/announcementService";
+import { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement, markVisibleAnnouncementsRead } from "../services/announcementService";
 import { canManageAcademic, isStudent } from "../utils/roles";
 
 const emptyForm = { title: "", message: "", audience: "All", priority: "Normal", expiryDate: "", isPinned: false, studyYear: "", department: "", section: "", course: "" };
@@ -35,6 +35,8 @@ function Announcements() {
       if (canManage) tasks.push(getStudents());
       const results = await Promise.all(tasks);
       setAnnouncements(Array.isArray(results[0]) ? results[0] : []);
+      // Visiting this page counts as seeing the announcements currently available to this account.
+      markVisibleAnnouncementsRead().catch(() => {});
       setCourses(Array.isArray(results[1]) ? results[1] : []);
       setStudents(Array.isArray(results[2]) ? results[2] : Array.isArray(results[2]?.students) ? results[2].students : []);
     } catch (error) { toast(error?.response?.data?.message || "Unable to load announcements.", "error"); }

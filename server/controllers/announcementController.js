@@ -1,6 +1,7 @@
 import Announcement from "../models/announcement.js";
 import Student from "../models/student.js";
 import Course from "../models/course.js";
+import AnnouncementRead from "../models/announcementRead.js";
 
 const activeOnly = () => ({ $or: [{ expiryDate: null }, { expiryDate: { $gte: new Date() } }] });
 const roleOf = (user) => String(user?.role || "").trim().toLowerCase();
@@ -25,23 +26,60 @@ const announcementMatchesStudent = (announcement, student) => {
   return assigned || courseProfileMatches;
 };
 
+const visibleAnnouncementsFor = async (user) => {
+  const filter = { ...activeOnly() };
+  if (isStudent(user)) {
+    const student = await studentFor(user);
+    if (!student || student.status !== "Active") return [];
+    filter.audience = { $in: ["All", "Students"] };
+    const all = await Announcement.find(filter).populate("createdBy", "fullName email role").populate("course", "code name department studyYear semester").sort({ isPinned: -1, createdAt: -1 });
+    return all.filter((a) => announcementMatchesStudent(a, student));
+  }
+  if (isInstructor(user)) filter.audience = { $in: ["All", "Instructors", "Students"] };
+  return Announcement.find(filter).populate("createdBy", "fullName email role").populate("course", "code name department studyYear semester").sort({ isPinned: -1, createdAt: -1 });
+};
+
 export const getAnnouncements = async (req, res) => {
   try {
-    const filter = { ...activeOnly() };
-    if (isStudent(req.user)) {
-      const student = await studentFor(req.user);
-      if (!student || student.status !== "Active") return res.json([]);
-      filter.audience = { $in: ["All", "Students"] };
-      // Course is populated below; filter the full set against the student's actual profile.
-      const all = await Announcement.find(filter).populate("createdBy", "fullName email role").populate("course", "code name department studyYear semester").sort({ isPinned: -1, createdAt: -1 });
-      return res.status(200).json(all.filter((a) => announcementMatchesStudent(a, student)));
-    }
-    if (isInstructor(req.user)) filter.audience = { $in: ["All", "Instructors", "Students"] };
-    const announcements = await Announcement.find(filter).populate("createdBy", "fullName email role").populate("course", "code name department studyYear semester").sort({ isPinned: -1, createdAt: -1 });
-    return res.status(200).json(announcements);
+    return res.status(200).json(await visibleAnnouncementsFor(req.user));
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Failed to load announcements." });
+  }
+};
+
+// Counts only announcements visible to this account and not yet read by this user.
+export const getUnreadAnnouncementCount = async (req, res) => {
+  try {
+    const visible = await visibleAnnouncementsFor(req.user);
+    if (!visible.length) return res.json({ count: 0 });
+    const ids = visible.map((item) => item._id);
+    const reads = await AnnouncementRead.find({ user: req.user._id, announcement: { $in: ids } }).select("announcement").lean();
+    const readIds = new Set(reads.map((item) => String(item.announcement)));
+    return res.json({ count: ids.filter((id) => !readIds.has(String(id))).length });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Failed to count unread announcements." });
+  }
+};
+
+// Opening the announcements page marks currently visible announcements as read for this account only.
+export const markVisibleAnnouncementsRead = async (req, res) => {
+  try {
+    const visible = await visibleAnnouncementsFor(req.user);
+    if (visible.length) {
+      await AnnouncementRead.bulkWrite(visible.map((item) => ({
+        updateOne: {
+          filter: { user: req.user._id, announcement: item._id },
+          update: { $setOnInsert: { user: req.user._id, announcement: item._id, readAt: new Date() } },
+          upsert: true,
+        },
+      })), { ordered: false });
+    }
+    return res.json({ message: "Announcements marked as read.", count: visible.length });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Failed to mark announcements as read." });
   }
 };
 

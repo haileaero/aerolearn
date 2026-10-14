@@ -947,15 +947,24 @@ flex-shrink:0;
   color: #2563eb;
 }
 
-.notification-dot {
+.notification-count {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 8px;
-  height: 8px;
+  top: -6px;
+  right: -6px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 2px solid #fff;
   border-radius: 999px;
   background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 800;
+  box-sizing: border-box;
 }
 
 .navbar-profile {

@@ -52,3 +52,14 @@ export async function deleteAnnouncement(
 
   return res.data;
 }
+
+export async function getUnreadAnnouncementCount() {
+  const res = await api.get("/announcements/unread-count");
+  return Number(res.data?.count || 0);
+}
+
+export async function markVisibleAnnouncementsRead() {
+  const res = await api.post("/announcements/read-all");
+  window.dispatchEvent(new Event("aerolearn:announcements-read"));
+  return res.data;
+}

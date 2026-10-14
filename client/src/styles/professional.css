@@ -240,7 +240,25 @@ button { -webkit-tap-highlight-color: transparent; }
   color: #64748b;
   cursor: pointer;
 }
-.notification-dot { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: #ef4444; border: 2px solid #fff; }
+.notification-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 800;
+  box-sizing: border-box;
+}
 .navbar-profile { display: flex; align-items: center; gap: 10px; padding-left: 4px; }
 .navbar-profile img { width: 40px; height: 40px; border-radius: 13px; object-fit: cover; border: 2px solid #eef4ff; }
 .navbar-profile-copy strong { display: block; color: var(--al-text); font-size: 12px; }

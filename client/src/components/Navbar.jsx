@@ -1,7 +1,8 @@
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { FaBell, FaSearch } from "react-icons/fa";
+import { getUnreadAnnouncementCount } from "../services/announcementService";
 
 const pageNames = {
   "/dashboard": "Overview",
@@ -22,6 +23,23 @@ function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const refreshUnread = async () => {
+      if (!user) { if (active) setUnreadCount(0); return; }
+      try {
+        const count = await getUnreadAnnouncementCount();
+        if (active) setUnreadCount(count);
+      } catch { /* Keep the navbar usable if the notification request temporarily fails. */ }
+    };
+    refreshUnread();
+    const timer = window.setInterval(refreshUnread, 30000);
+    window.addEventListener("focus", refreshUnread);
+    window.addEventListener("aerolearn:announcements-read", refreshUnread);
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener("focus", refreshUnread); window.removeEventListener("aerolearn:announcements-read", refreshUnread); };
+  }, [user?._id, user?.id, user?.role]);
   const pageName = location.pathname.startsWith("/assessment") ? "Assessment" : pageNames[location.pathname] || (location.pathname.startsWith("/course/") ? "Course Workspace" : "AeroLearn");
   const avatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || "User")}&background=123676&color=fff&bold=true`;
   const avatarUrl = user?.profileImage || avatarFallback;
@@ -67,9 +85,9 @@ function Navbar() {
       </div>
 
       <div className="navbar-actions">
-        <button type="button" className="navbar-icon-button" aria-label="Open announcements" onClick={() => navigate("/announcements")}>
+        <button type="button" className="navbar-icon-button" aria-label={unreadCount ? `${unreadCount} unread announcements. Open announcements` : "Open announcements"} title={unreadCount ? `${unreadCount} unread announcement${unreadCount === 1 ? "" : "s"}` : "Announcements"} onClick={() => navigate("/announcements")}>
           <FaBell />
-          <span className="notification-dot" />
+          {unreadCount > 0 && <span className="notification-count">{unreadCount > 99 ? "99+" : unreadCount}</span>}
         </button>
         <div className="navbar-profile">
           <img src={avatarUrl} alt={`${user?.fullName || "User"} profile`} onError={(event) => { if (event.currentTarget.src !== avatarFallback) event.currentTarget.src = avatarFallback; }} />

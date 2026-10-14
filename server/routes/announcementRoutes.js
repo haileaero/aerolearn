@@ -3,6 +3,8 @@ import express from "express";
 import {
 
   getAnnouncements,
+  getUnreadAnnouncementCount,
+  markVisibleAnnouncementsRead,
   getAnnouncementById,
   createAnnouncement,
   updateAnnouncement,
@@ -33,6 +35,9 @@ router.get(
   getAnnouncements
 
 );
+
+router.get("/unread-count", protect, getUnreadAnnouncementCount);
+router.post("/read-all", protect, markVisibleAnnouncementsRead);
 
 router.get(
 
