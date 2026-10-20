@@ -190,6 +190,20 @@ export const getCourseById = async (req, res) => {
       }
     }
 
+    // For staff, return a roster derived from this exact academic offering
+    // instead of trusting possibly stale Course.students references. The same
+    // course code may be used by multiple departments.
+    if (req.user?.role !== "Student") {
+      const courseResponse = course.toObject();
+      courseResponse.students = await Student.find(
+        matchingStudentFilterForCourse(course)
+      )
+        .select("studentId fullName section year status department")
+        .sort({ fullName: 1 })
+        .lean();
+      return res.json(courseResponse);
+    }
+
     return res.json(course);
 
   } catch (error) {

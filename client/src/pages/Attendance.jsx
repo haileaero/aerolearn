@@ -200,9 +200,10 @@ function Attendance() {
       return savedRow ? { ...rosterStudent, ...savedRow, studentId: rosterStudent.studentId, fullName: rosterStudent.fullName, section: rosterStudent.section, year: rosterStudent.year } : rosterStudent;
     });
 
-    const orphaned = saved.filter((row) => !row.student || !roster.some((r) => String(r.student) === String(row.student)));
-    const usefulOrphans = orphaned.filter((row) => row.studentId !== "—" || row.fullName !== "Student record unavailable");
-    return [...merged, ...usefulOrphans];
+    // When a current course roster is available, it is authoritative. Do not
+    // append saved rows that are no longer enrolled or belong to another
+    // department; that behavior caused cross-department students to reappear.
+    return merged;
   };
 
   const loadStudents = async (selectedWeek = week, selectedPeriod = period) => {

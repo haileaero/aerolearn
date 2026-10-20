@@ -13,6 +13,7 @@ const syncAssessmentRoster = async (assessment) => {
   const course = assessment.course && typeof assessment.course === "object" ? assessment.course : null;
   if (!course?._id) return assessment;
 
+<<<<<<< HEAD
   const [matching, linked] = await Promise.all([
     Student.find(rosterFilterForCourse(course)).select("_id").lean(),
     Student.find({
@@ -37,6 +38,30 @@ const syncAssessmentRoster = async (assessment) => {
     })) } });
     await assessment.populate("scores.student", "studentId fullName department section");
   }
+=======
+  // The course's academic offering is the source of truth. Do not union
+  // stale Student.courses / Course.students references into this roster: the
+  // same course code may be offered to several departments.
+  const matching = await Student.find(rosterFilterForCourse(course))
+    .select("_id")
+    .lean();
+  const rosterIds = matching.map((student) => String(student._id));
+  const existing = new Map(
+    (assessment.scores || [])
+      .filter((row) => row.student)
+      .map((row) => [String(row.student._id || row.student), row])
+  );
+  // Filter the API response without deleting historical score rows from the
+  // database. Existing scores for eligible students are retained; newly
+  // eligible students get an empty row in this response until the score sheet
+  // is saved.
+  assessment.scores = rosterIds.map((studentId) => {
+    const row = existing.get(studentId);
+    if (row) return row;
+    return { student: studentId, score: 0, entered: false, remark: "" };
+  });
+  await assessment.populate("scores.student", "studentId fullName department section");
+>>>>>>> 31203c3 (Fix department-specific student rosters)
   assessment.scores = (assessment.scores || []).filter((row) => row.student);
   return assessment;
 };
@@ -188,9 +213,15 @@ export const createAssessment =
         return res.status(403).json({ message: "You can only create assessments for courses assigned to you." });
       }
 
+<<<<<<< HEAD
       // Enrollment can exist on either side in older AeroLearn records.
       // Reconcile both Course.students and Student.courses before building the
       // score sheet so Admin/Instructor do not get a false “no students” error.
+=======
+      // A course offering belongs to one department/year/semester. Use that
+      // academic placement to build its roster; stale cross-department links
+      // must never pull students into another department's assessment.
+>>>>>>> 31203c3 (Fix department-specific student rosters)
       const matchingStudents = await Student.find({
         department: selectedCourse.department,
         year: selectedCourse.studyYear,
@@ -198,6 +229,7 @@ export const createAssessment =
         status: "Active",
       }).select("_id");
 
+<<<<<<< HEAD
       const explicitlyLinked = await Student.find({
         $or: [
           { _id: { $in: selectedCourse.students || [] } },
@@ -211,6 +243,9 @@ export const createAssessment =
         enrolledMap.set(String(student._id), student._id);
       }
       const enrolledStudentIds = [...enrolledMap.values()];
+=======
+      const enrolledStudentIds = matchingStudents.map((student) => student._id);
+>>>>>>> 31203c3 (Fix department-specific student rosters)
 
       // Assessment creation is course-level and must not depend on enrollment.
       // If students are already available, keep the existing relationships in sync;
@@ -449,6 +484,19 @@ export const updateScores =
         (await Student.find({ _id: { $in: requestedStudentIds } }).select("_id").lean())
           .map((student) => String(student._id))
       );
+<<<<<<< HEAD
+=======
+      const scoreCourse = await Course.findById(assessment.course)
+        .select("department studyYear semester")
+        .lean();
+      if (!scoreCourse) {
+        return res.status(400).json({ message: "The course for this assessment no longer exists." });
+      }
+      const eligibleStudentIds = new Set(
+        (await Student.find(rosterFilterForCourse(scoreCourse)).distinct("_id"))
+          .map((studentId) => String(studentId))
+      );
+>>>>>>> 31203c3 (Fix department-specific student rosters)
 
       for (const item of req.body.scores) {
 
@@ -458,6 +506,15 @@ export const updateScores =
           });
         }
 
+<<<<<<< HEAD
+=======
+        if (!eligibleStudentIds.has(String(item.student))) {
+          return res.status(400).json({
+            message: "This student is not enrolled in the department, study year and semester for this course.",
+          });
+        }
+
+>>>>>>> 31203c3 (Fix department-specific student rosters)
         if (
           item.score < 0 ||
           item.score >
@@ -475,12 +532,19 @@ export const updateScores =
 
       }
 
-      assessment.scores = req.body.scores.map((item) => ({
-        student: item.student,
-        score: item.entered === false ? 0 : Number(item.score) || 0,
-        entered: item.entered !== false,
-        remark: item.remark || "",
-      }));
+      const historicalOutOfRosterRows = (assessment.scores || []).filter((row) => {
+        const studentId = row.student?._id || row.student;
+        return studentId && !eligibleStudentIds.has(String(studentId));
+      });
+      assessment.scores = [
+        ...req.body.scores.map((item) => ({
+          student: item.student,
+          score: item.entered === false ? 0 : Number(item.score) || 0,
+          entered: item.entered !== false,
+          remark: item.remark || "",
+        })),
+        ...historicalOutOfRosterRows,
+      ];
       await assessment.save();
 
       const updatedAssessment =
