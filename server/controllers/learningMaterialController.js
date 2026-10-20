@@ -6,6 +6,20 @@ import { Readable } from "stream";
 import path from "path";
 import crypto from "crypto";
 
+/**
+ * Instructors may only manage materials attached to course offerings
+ * explicitly assigned to their account. Admin access remains unrestricted.
+ */
+const instructorOwnsCourse = async (userId, courseId) => {
+  if (!userId || !courseId) return false;
+  return Boolean(
+    await Course.exists({
+      _id: courseId,
+      instructor: userId,
+    })
+  );
+};
+
 /* ============================================================
    UPLOAD FILE TO CLOUDINARY
 ============================================================ */
@@ -72,6 +86,15 @@ export const createLearningMaterial = async (
       dueDate,
     } = req.body;
 
+    if (
+      req.user?.role === "Instructor" &&
+      !(await instructorOwnsCourse(req.user._id, course))
+    ) {
+      return res.status(403).json({
+        message: "You can only add learning materials to courses assigned to you.",
+      });
+    }
+
     let file = "";
 
     /* --------------------------------------------------------
@@ -132,6 +155,20 @@ export const getLearningMaterials = async (
 ) => {
   try {
     let filter = {};
+
+    if (req.user?.role === "Instructor") {
+      const assignedCourses = await Course.find({
+        instructor: req.user._id,
+      }).select("_id");
+
+      // Use course offering IDs, not course names, so materials from another
+      // department or another instructor are never mixed into this roster.
+      filter = {
+        course: {
+          $in: assignedCourses.map((course) => course._id),
+        },
+      };
+    }
 
     if (req.user?.role === "Student") {
       const student = await Student.findOne({ $or: [{ user: req.user._id }, { studentId: req.user.studentId }] });
@@ -228,12 +265,24 @@ export const getLearningMaterialById =
       const learningMaterial =
         await LearningMaterial.findById(
           req.params.id
-        );
+        ).populate("course", "name title code department studyYear semester status instructor");
 
       if (!learningMaterial) {
         return res.status(404).json({
           message:
             "Learning material not found",
+        });
+      }
+
+      if (
+        req.user?.role === "Instructor" &&
+        !(
+          learningMaterial.course &&
+          String(learningMaterial.course.instructor?._id || learningMaterial.course.instructor || "") === String(req.user._id)
+        )
+      ) {
+        return res.status(403).json({
+          message: "You can only access learning materials for courses assigned to you.",
         });
       }
 
@@ -265,6 +314,19 @@ export const updateLearningMaterial =
           message:
             "Learning material not found",
         });
+      }
+
+      if (req.user?.role === "Instructor") {
+        const nextCourseId = req.body.course || learningMaterial.course;
+
+        if (
+          !(await instructorOwnsCourse(req.user._id, learningMaterial.course)) ||
+          !(await instructorOwnsCourse(req.user._id, nextCourseId))
+        ) {
+          return res.status(403).json({
+            message: "You can only update materials for courses assigned to you.",
+          });
+        }
       }
 
       learningMaterial.title =
